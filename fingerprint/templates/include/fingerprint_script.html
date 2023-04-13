@@ -1,0 +1,20 @@
+{% load static %}
+<script>
+  const fpPromise = import('{% static "FingerprintJSv3.4.0.js" %}').then(
+    FingerprintJS => FingerprintJS.load()
+  );
+  fpPromise
+    .then(fp => fp.get())
+    .then(result => {
+      let formData = new FormData();
+      formData.append('id', result.visitorId);
+
+      fetch("{% url 'fingerprint' %}", {
+        method: "POST",
+        body: formData,
+        credentials: 'include'
+      }).then(res => {
+        window.location.replace('{{ redirect_url }}');
+      });
+    })
+</script>
