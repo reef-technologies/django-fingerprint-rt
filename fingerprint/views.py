@@ -23,8 +23,9 @@ def fingerprint(fn):
 
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
+        session_key = get_or_create_session_key(request)
         RequestFingerprint.objects.create(
-            session_key=get_or_create_session_key(request),
+            user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
             ip=get_client_ip(request)[0],
             user_agent=request.META.get('HTTP_USER_AGENT', ''),
             accept=request.META.get('HTTP_ACCEPT', ''),
@@ -49,9 +50,9 @@ def remember_user_session(fn):
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         if request.user.is_authenticated:
-            UserSession.objects.get_or_create(
-                user=request.user,
+            UserSession.objects.update_or_create(
                 session_key=get_or_create_session_key(request),
+                defaults=dict(user=request.user),
             )
         return fn(request, *args, **kwargs)
 
@@ -93,8 +94,9 @@ class FingerprintView(TemplateView):
         except MultiValueDictKeyError:
             raise BadRequest()
 
+        session_key = get_or_create_session_key(request)
         BrowserFingerprint.objects.create(
-            session_key=get_or_create_session_key(request),
+            user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
             visitor_id=visitor_id,
         )
         return HttpResponse(status=200)
