@@ -5,6 +5,8 @@ This app uncludes browser (== frontend) and request (== backend) fingerprinting 
 
 This may be helpful for better understanding users of the application, for example by knowing which and how many devices they use, where are they from etc.
 
+![Screenshot_2023-05-02_16-02-02](https://user-images.githubusercontent.com/73276794/235674052-5c5150be-e1c3-4a85-9646-244c939db0fb.jpg)
+
 # Setup
 
 Add `fingerprint` to `INSTALLED_APPS`:
