@@ -10,6 +10,9 @@ class UserSessionAdmin(admin.ModelAdmin):
     search_fields = 'user__username', 'session_key',
     ordering = '-created',
 
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
 
 class FingerprintUserMixin(admin.ModelAdmin):
     def get_queryset(self, *args, **kwargs):

@@ -3,9 +3,15 @@ from pathlib import Path
 
 
 ROOT = Path('.')
-PYTHON_VERSIONS = ['3.9', '3.10', '3.11'][::-1]
-DJANGO_VERSIONS = ['3.1', '3.2', '4.0', '4.1', '4.2'][::-1]
+PYTHON_VERSIONS = ['3.9', '3.10'][::-1]
+DJANGO_VERSIONS = ['3.2', '4.0', '4.1', '4.2'][::-1]
 DEMO_APP_DIR = ROOT / 'demo'
+TEST_REQUIREMENTS = [
+    '.',
+    'pytest', 'pytest-django',
+    'ipdb', 'freezegun',
+    'psycopg2-binary',
+]
 
 nox.options.default_venv_backend = 'venv'
 nox.options.stop_on_first_error = True
@@ -22,10 +28,5 @@ def lint(session):
 @nox.session(python=PYTHON_VERSIONS)
 @nox.parametrize('django', DJANGO_VERSIONS)
 def test(session, django: str):
-    session.install(
-        f'django~={django}.0',
-        'pytest', 'pytest-django',
-        'ipdb', 'freezegun',
-        'psycopg2-binary',
-    )
+    session.install(f'django~={django}.0', *TEST_REQUIREMENTS)
     session.run('pytest', '-W', 'ignore::DeprecationWarning', '-s', '-vv', str(DEMO_APP_DIR / 'demo' / 'tests'), *session.posargs, env={'DJANGO_SETTINGS_MODULE': 'demo.settings'})

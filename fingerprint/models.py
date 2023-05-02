@@ -9,7 +9,7 @@ from django.db.models.signals import post_save
 
 
 class UserSession(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sessions')
     session_key = models.CharField(max_length=40)
     created = models.DateTimeField(auto_now_add=True)
 

@@ -59,8 +59,8 @@ def remember_user_session(fn):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
-@method_decorator(remember_user_session, name='dispatch')
-@method_decorator(fingerprint, name='dispatch')
+@method_decorator(remember_user_session, name='get')
+@method_decorator(fingerprint, name='get')
 class FingerprintView(TemplateView):
     """
     Multi-purpose fingerprinting view.
@@ -77,7 +77,7 @@ class FingerprintView(TemplateView):
     contains `id` post parameter, which is effectively a browser fingerprint (visitor_id).
     """
 
-    template_name = 'fingerprint.html'
+    template_name = 'fingerprint/fingerprint.html'
     redirect_in = timedelta(seconds=3)
 
     def get_context_data(self, **kwargs):

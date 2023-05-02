@@ -16,9 +16,9 @@ INSTALLED_APPS = [
 ]
 ```
 
-## All-in-one setup
+## All-in-one setup via redirect url
 
-A special redirect page is provided, which will make user's fingerprint and then redirect him to next location. In order to host it, add it to your `urls.py` (for this example we use path `/redirect/`):
+A special redirect page is provided. It is needed to accept internal POST requests from javascript code, but it also has a nice feature: if user visits this page, the page will capture user's fingerprint and then redirect him to next location. In order to host this page, add it to your `urls.py` (for this example we use path `/redirect/`):
 
 ```python
 urlpatterns = [
@@ -55,7 +55,7 @@ Browser fingerprinting may be triggered by including javascript code in any page
 </body>
 ```
 
-This will make a browser fingerprint and send it to fingerprinting endpoint via POST request.
+This will make a browser fingerprint and send it to fingerprinting endpoint (described in previous step) via POST request.
 
 > Please note that user can always disable javascript or block certain scripts, plus browser fingerprinting is not 100% accurate; thus browser fingerprinting should not be considered as reliable.
 
@@ -104,8 +104,7 @@ This decorator will remember that current session key is associated with current
 
 # TODOs:
 
-* more params in BrowserFingerprint - visitor id is not enough
-* tests
+* more params in BrowserFingerprint - visitor id may be not enough
 
 # Included licenses
 
