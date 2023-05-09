@@ -1,7 +1,7 @@
 # django-fingerprint-rt
 When you need to know your users a bit better.
 
-This app uncludes browser (== frontend) and request (== backend) fingerprinting of users.
+This app includes browser (== frontend) and request (== backend) fingerprinting of users.
 
 This may be helpful for better understanding users of the application, for example by knowing which and how many devices they use, where are they from etc.
 
@@ -33,10 +33,10 @@ Now you can make users visit any page through this redirect:
 
 ```html
 <a href="{% url 'home' %}">Go to home page directly (without fingerprinting)</a>
-<a href="{% url 'fingerprint' %}?next={% url 'home' %}">Go to home page through fingerprinting</a>
+{% url 'home' as next %}
+<a href="{% url 'fingerprint' %}?next={{ next | urlencode }}">Go to home page through fingerprinting</a>
 ```
 
-> TODO: maybe add `| urlencode` for `next` parameter.
 
 When user visits this fingerprinting page
 1) his GET request is fingerprinted and recorder to the database

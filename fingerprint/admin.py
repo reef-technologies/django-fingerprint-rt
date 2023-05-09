@@ -1,6 +1,6 @@
 from datetime import timedelta
 from functools import wraps
-from itertools import chain
+from itertools import chain, islice
 from typing import Callable, Iterator
 
 from django.contrib import admin
@@ -19,14 +19,15 @@ except ImportError:
 
 
 class html_objects_list:
-    def __init__(self, format_string: str):
+    def __init__(self, format_string: str, max_items: int = 10):
         self.format_string = format_string
+        self.max_items = max_items
 
     def __call__(self, fn: Callable) -> Callable:
 
         @wraps(fn)
         def wrapped(*args, **kwargs):
-            results = list(fn(*args, **kwargs))
+            results = list(islice(fn(*args, **kwargs), self.max_items))
             return format_html(
                 '<br>'.join(self.format_string for _ in results),
                 *chain.from_iterable(results)
@@ -46,23 +47,30 @@ class UserSessionAdmin(admin.ModelAdmin):
         return (
             super().get_queryset(request)
             .select_related('user')
-            .prefetch_related('browserfingerprints', 'requestfingerprints')
+            .prefetch_related(
+                Prefetch(
+                    'browserfingerprints',
+                    queryset=BrowserFingerprint.objects.order_by('visitor_id', '-created').distinct('visitor_id'),
+                ),
+                Prefetch(
+                    'requestfingerprints',
+                    queryset=RequestFingerprint.objects.order_by('user_session', 'user_agent', '-created').distinct('user_session', 'user_agent'),
+                ),
+            )
         )
 
-    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><tt>{}</tt></a>')
+    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><code>{}</code></a>')
     def browser_fingerprints(self, instance) -> Iterator[tuple]:
-        fingerprints = instance.browserfingerprints.order_by('visitor_id', '-created').distinct('visitor_id')
-        for fingerprint in fingerprints:
+        for fingerprint in instance.browserfingerprints.all():
             yield (
                 fingerprint.created.date(),
                 reverse('admin:fingerprint_browserfingerprint_changelist') + f'?user_session={instance.id}',
                 fingerprint.get_value_display(),
             )
 
-    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><tt>{}</tt></a>')
+    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><code>{}</code></a>')
     def request_fingerprints(self, instance) -> Iterator[tuple]:
-        fingerprints = instance.requestfingerprints.order_by('user_agent', '-created').distinct('user_agent')
-        for fingerprint in fingerprints:
+        for fingerprint in instance.requestfingerprints.all():
             yield (
                 fingerprint.created.date(),
                 reverse('admin:fingerprint_requestfingerprint_changelist') + f'?user_session={instance.id}',
@@ -133,13 +141,13 @@ class NumFingerprintsListFilter(admin.SimpleListFilter):
 
 
 class NumBrowserFingerprintsListFilter(NumFingerprintsListFilter):
-    title = '# browser fingerprints'
+    title = 'unique browser fingerprints'
     parameter_name = 'num_browser_fingerprints_group'
     query_parameter = 'num_browser_fingerprints'
 
 
 class NumRequestFingerprintsListFilter(NumFingerprintsListFilter):
-    title = '# request fingerprints'
+    title = 'unique request fingerprints'
     parameter_name = 'num_request_fingerprints_group'
     query_parameter = 'num_request_fingerprints'
 
@@ -199,8 +207,8 @@ class UserFingerprintAdmin(admin.ModelAdmin):
             super().get_queryset(request)
             .prefetch_related(
                 Prefetch('sessions', queryset=UserSession.objects.all().order_by('-created')),
-                'sessions__browserfingerprints',
-                'sessions__requestfingerprints',
+                Prefetch('sessions__browserfingerprints', queryset=BrowserFingerprint.objects.order_by('visitor_id', '-created').distinct('visitor_id')),
+                Prefetch('sessions__requestfingerprints', queryset=RequestFingerprint.objects.order_by('user_session', 'user_agent', '-created').distinct('user_session', 'user_agent')),
             )
             .annotate(
                 num_browser_fingerprints=Count('sessions__browserfingerprints__visitor_id', distinct=True),
@@ -224,7 +232,8 @@ class UserFingerprintAdmin(admin.ModelAdmin):
             instance.num_request_fingerprints
         )
 
-    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><tt>{}</tt></a>')
+    @admin.display(description='last sessions')
+    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><code>{}</code></a>')
     def sessions(self, instance) -> Iterator[tuple]:
         for session in instance.sessions.all():
             yield (
@@ -233,36 +242,24 @@ class UserFingerprintAdmin(admin.ModelAdmin):
                 session.get_value_display(),
             )
 
-    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><tt>{}</tt></a>')
+    @admin.display(description='last browsers')
+    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><code>{}</code></a>')
     def browser_fingerprints(self, instance) -> Iterator[tuple]:
-        fingerprints = (
-            BrowserFingerprint.objects
-            .select_related('user_session__user')
-            .filter(user_session__user=instance)
-            .order_by('visitor_id', '-created')
-            .distinct('visitor_id')
-        )
+        for session in instance.sessions.all():
+            for fingerprint in session.browserfingerprints.all():
+                yield (
+                    fingerprint.created.date(),
+                    reverse('admin:fingerprint_browserfingerprint_changelist') + f'?id={fingerprint.id}',
+                    fingerprint.get_value_display(),
+                )
 
-        for fingerprint in fingerprints:
-            yield (
-                fingerprint.created.date(),
-                reverse('admin:fingerprint_browserfingerprint_changelist') + f'?id={fingerprint.id}',
-                fingerprint.get_value_display(),
-            )
-
-    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><tt>{}</tt></a>')
+    @admin.display(description='last requests')
+    @html_objects_list('{} &nbsp;&nbsp; <a href="{}"><code>{}</code></a>')
     def request_fingerprints(self, instance) -> Iterator[tuple]:
-        fingerprints = (
-            RequestFingerprint.objects
-            .select_related('user_session__user')
-            .filter(user_session__user=instance)
-            .order_by('user_agent', '-created')
-            .distinct('user_agent')
-        )
-
-        for fingerprint in fingerprints:
-            yield (
-                fingerprint.created.date(),
-                reverse('admin:fingerprint_requestfingerprint_changelist') + f'?id={fingerprint.id}',
-                fingerprint.get_value_display(),
-            )
+        for session in instance.sessions.all():
+            for fingerprint in session.requestfingerprints.all():
+                yield (
+                    fingerprint.created.date(),
+                    reverse('admin:fingerprint_requestfingerprint_changelist') + f'?id={fingerprint.id}',
+                    fingerprint.get_value_display(),
+                )

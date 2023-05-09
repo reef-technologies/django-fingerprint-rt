@@ -1,15 +1,18 @@
+from datetime import timedelta
 from functools import wraps
+from typing import Optional
+
+from django.core.exceptions import BadRequest, DisallowedRedirect
+from django.http.response import HttpResponse
+from django.utils.datastructures import MultiValueDictKeyError
+from django.utils.decorators import method_decorator
+from django.utils.encoding import iri_to_uri
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
-from django.utils.decorators import method_decorator
-from django.http.response import HttpResponse
-from django.core.exceptions import BadRequest
-from django.utils.datastructures import MultiValueDictKeyError
-from datetime import timedelta
-
 from ipware import get_client_ip
 
-from .models import RequestFingerprint, BrowserFingerprint, UserSession
+from .models import BrowserFingerprint, RequestFingerprint, UserSession
 
 
 def get_or_create_session_key(request) -> str:
@@ -21,16 +24,21 @@ def get_or_create_session_key(request) -> str:
 def fingerprint(fn):
     """ A decorator which creates a backend Fingerprint object for the current request. """
 
+    max_length = {
+        field_name: RequestFingerprint._meta.get_field(field_name).max_length
+        for field_name in ('user_agent', 'accept', 'content_encoding', 'content_language')
+    }
+
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
         RequestFingerprint.objects.create(
             user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
             ip=get_client_ip(request)[0],
-            user_agent=request.META.get('HTTP_USER_AGENT', ''),
-            accept=request.META.get('HTTP_ACCEPT', ''),
-            content_encoding=request.META.get('HTTP_CONTENT_ENCODING', ''),
-            content_language=request.META.get('HTTP_CONTENT_LANGUAGE', ''),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:max_length['user_agent']],
+            accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
+            content_encoding=request.META.get('HTTP_CONTENT_ENCODING', '')[:max_length['content_encoding']],
+            content_language=request.META.get('HTTP_CONTENT_LANGUAGE', '')[:max_length['content_language']],
         )
         return fn(request, *args, **kwargs)
 
@@ -76,13 +84,21 @@ class FingerprintView(TemplateView):
 
     If user sends POST request to this page, it is assumed that the request is coming from javascript code and
     contains `id` post parameter, which is effectively a browser fingerprint (visitor_id).
+
+    If redirect to other domains is required, then this view should be subclassed and
+    `allowed_hosts` class variable should contain a set of allowed domains, say, `{'google.com'}`.
+    By default only relative paths are allowed.
     """
 
     template_name = 'fingerprint/fingerprint.html'
     redirect_in = timedelta(seconds=3)
+    allowed_hosts: Optional[set] = None
 
     def get_context_data(self, **kwargs):
-        redirect_url = self.request.build_absolute_uri(self.request.GET.get('next', '/'))
+        redirect_url = iri_to_uri(self.request.GET.get('next', '/'))
+        if not url_has_allowed_host_and_scheme(redirect_url, self.allowed_hosts):
+            raise DisallowedRedirect()
+
         return {
             'redirect_in': self.redirect_in,
             'redirect_url': redirect_url,

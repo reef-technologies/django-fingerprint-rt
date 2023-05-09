@@ -1,3 +1,4 @@
 Current user: {{ request.user }}<br>
-Please visit <a href="{% url 'fingerprint' %}?next={% url 'admin:index' %}">this url</a> to leave fingerprints.<br>
-Then you'll be redirected to <a href="{% url 'admin:index' %}">admin page</a> to see the fingerprints.<br>
+{% url 'admin:index' as next %}
+Please visit <a href="{% url 'fingerprint' %}?next={{ next | urlencode }}">this url</a> to leave fingerprints.<br>
+Then you'll be redirected to <a href="{{ next }}">admin page</a> to see the fingerprints.<br>

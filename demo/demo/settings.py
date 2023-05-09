@@ -42,9 +42,12 @@ INSTALLED_APPS = [
 
     'demo',
     'fingerprint',
+
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -126,6 +129,8 @@ USE_I18N = True
 
 USE_TZ = True
 
+SHOW_TOOLBAR_CALLBACK = lambda: True  # noqa
+INTERNAL_IPS = ['127.0.0.1']
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
