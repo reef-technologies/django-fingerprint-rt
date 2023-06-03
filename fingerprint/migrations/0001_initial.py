@@ -16,19 +16,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="UserFingerprint",
-            fields=[],
-            options={
-                "proxy": True,
-                "indexes": [],
-                "constraints": [],
-            },
-            bases=("auth.user",),
-            managers=[
-                ("objects", django.contrib.auth.models.UserManager()),
-            ],
-        ),
-        migrations.CreateModel(
             name="UserSession",
             fields=[
                 (

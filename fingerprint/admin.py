@@ -4,12 +4,13 @@ from itertools import chain, islice
 from typing import Callable, Iterator
 
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from django.db.models import Count, Max, Prefetch, Q
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.timezone import now
 
-from .models import BrowserFingerprint, RequestFingerprint, UserFingerprint, UserSession
+from .models import BrowserFingerprint, RequestFingerprint, UserSession
 
 try:
     from itertools import pairwise
@@ -40,7 +41,7 @@ class html_objects_list:
 class UserSessionAdmin(admin.ModelAdmin):
     list_display = 'session_key', 'user', 'browser_fingerprints', 'request_fingerprints', 'created',
     list_filter = 'created',
-    search_fields = 'user__username', 'session_key',
+    search_fields = 'user', 'session_key',
     ordering = '-created',
 
     def get_queryset(self, request):
@@ -84,8 +85,7 @@ class FingerprintBaseAdmin(admin.ModelAdmin):
     ordering = '-created',
     search_fields = (
         'user_session__session_key',
-        'user_session__user__email',
-        'user_session__user__username',
+        'user_session__user',
     )
 
     def get_queryset(self, request):
@@ -187,20 +187,18 @@ class LastFingerprintCreatedListFilter(admin.SimpleListFilter):
         )
 
 
-@admin.register(UserFingerprint)
-class UserFingerprintAdmin(admin.ModelAdmin):
-    list_display = (
-        'username', 'email',
+class UserFingerprintAdmin(UserAdmin):
+    list_display = UserAdmin.list_display + (
         'sessions',
         'num_browser_fingerprints', 'browser_fingerprints',
         'num_request_fingerprints', 'request_fingerprints',
     )
-    list_filter = (
+    list_filter = UserAdmin.list_filter + (
         LastFingerprintCreatedListFilter,
         NumBrowserFingerprintsListFilter,
         NumRequestFingerprintsListFilter,
     )
-    search_fields = 'username', 'email',
+    search_fields = 'user',
 
     def get_queryset(self, request):
         return (

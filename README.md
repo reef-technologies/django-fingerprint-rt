@@ -18,6 +18,26 @@ INSTALLED_APPS = [
 ]
 ```
 
+## Admin site setup
+
+This framework auto-registers `ModelAdmin`s for all its models except user model. Due to [some Django limitations](https://docs.djangoproject.com/en/3.2/topics/auth/customizing/#custom-users-and-proxy-models), it's up to developer to set up fingerprinting fields for user model admin. There is a helper class `fingerprint.admin.UserFingerprintAdmin` which may be subclassed to gain extra fields related to fingerprinting:
+
+* `sessions`
+* `num_browser_fingerprints`
+* `browser_fingerprints`
+* `num_request_fingerprints`
+* `request_fingerprints`
+
+It also provides these filters:
+
+* `LastFingerprintCreatedListFilter`
+* `NumBrowserFingerprintsListFilter`
+* `NumRequestFingerprintsListFilter`
+
+Please pay attention that it overwrites `get_queryset` method of your `ModelAdmin`, so if you have custom queryset then don't forget to  combine your queryset with this one.
+
+Sample setup could look like this: [demo admin](demo/demo/admin.py)
+
 ## All-in-one setup via redirect url
 
 A special redirect page is provided. It is needed to accept internal POST requests from javascript code, but it also has a nice feature: if user visits this page, the page will capture user's fingerprint and then redirect him to next location. In order to host this page, add it to your `urls.py` (for this example we use path `/redirect/`):
