@@ -92,9 +92,3 @@ class RequestFingerprint(AbstractFingerprint):
 
     def get_value_display(self) -> str:
         return self.user_agent[:24] + '...'
-
-
-class UserFingerprint(get_user_model()):
-    """ This is just a proxy model for admin site, since django doesn't allow to register two admins for the same model. """
-    class Meta:
-        proxy = True
