@@ -104,9 +104,57 @@ def my_view(request):
 
 This decorator will remember that current session key is associated with current user.
 
-# TODOs:
+# Hit counts
 
-* more params in BrowserFingerprint - visitor id may be not enough
+As a side effect, views which are decorated with `@fingerprint` decorator will have statistics about how many times they were visited by unique users (unique sessions, to be precise - so if user logs out and logs in, it's a new session).
+
+This may be used to show "hit count" for any particular page. Please note that in current implementation urls are counted as absolute url with query parameters, like this: `https://example.com/?param1=value1&param2=value2`. This means that if you have two urls which result in the same page, they will be counted separately. All these are different urls:
+* `https://example.com/?param1=value1&param2=value2`
+* `https://example.com/?param1=value1`
+* `http://example.com/?param1=value1&param2=value2`
+* `https://example.com/`
+* `https://example.com`
+* `http://example.com/`
+* `http://example.com`
+
+
+## Usage
+
+There is a helper template tag which will show hit count for any url: `hit_count`. Again, it accepts absolute url, so the template could look like this:
+
+```html
+{% load hit_count %}
+
+{% hit_count request.build_absolute_uri %} views registered for this page
+```
+
+One downside of this approach is that it will make a database query for each invocation. So this tag is handy for `DetailView` where only one object is present, but for bulk views (like `ListView`), it is recommened to use `get_count_for_urls` or `get_count_for_objects` class methods.
+
+Following will return a `collections.Counter` object with number of hits for each url, making a single database query:
+```python
+RequestFingerprint.get_count_for_urls([absolute_url1, absolute_url2])
+# Counter({absolute_url1: 1, absolute_url2: 4})
+```
+
+If model has a properly defined `get_absolute_url` method, then following will return a `collections.Counter` object with number of hits for each object, making a single database query:
+```python
+RequestFingerprint.get_count_for_objects(request, [instance1, instance2])
+# Counter({instance1_url: 1, instance2_url: 4})
+```
+
+So in a `ListView` one could add hit count to all objects like this:
+```python
+class MyView(ListView):
+    # ...
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        hit_counts = RequestFingerprint.get_count_for_objects(self.request, context['object_list'])
+        for obj, count in hit_counts.items():
+            obj.hit_count = count
+
+        return context
+```
 
 # Included licenses
 

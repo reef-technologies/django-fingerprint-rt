@@ -1,12 +1,16 @@
-from typing import Optional
+from __future__ import annotations
+from collections import Counter
+
+from functools import lru_cache
 
 from django.conf import settings
-from django.contrib.sessions.models import Session
-from django.contrib.auth.models import AbstractBaseUser
-from django.db import models
-from django.dispatch import receiver
-from django.db.models.signals import post_save
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AbstractBaseUser
+from django.contrib.sessions.models import Session
+from django.db import models
+from django.db.models import Count
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class UserSession(models.Model):
@@ -42,19 +46,59 @@ def connect_user_to_session(sender, instance, created, **kwargs):
         )
 
 
+class Url(models.Model):
+    value = models.CharField(max_length=255, unique=True)
+
+    def __str__(self) -> str:
+        return self.value
+
+    @classmethod
+    @lru_cache(maxsize=1024)
+    def from_value(cls, value: str) -> Url:
+        return cls.objects.get_or_create(value=value)[0]
+
+
 class AbstractFingerprint(models.Model):
     user_session = models.ForeignKey(UserSession, on_delete=models.CASCADE, related_name='%(model_name)ss')
+    url = models.ForeignKey(Url, on_delete=models.CASCADE, related_name='%(model_name)ss')
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
         indexes = [
             models.Index(fields=['user_session', '-created']),
+            models.Index(fields=['url', 'user_session']),
         ]
 
     @property
-    def user(self) -> Optional[AbstractBaseUser]:
+    def user(self) -> AbstractBaseUser | None:
         return self.user_session.user
+
+    @classmethod
+    def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
+
+        id_to_url = {url_obj.id: url_obj for url in urls if (url_obj := Url.from_value(url))}
+
+        # this is SELECT COUNT(*) GROUP BY in django:
+        ids_and_hits = (
+            cls.objects
+            .filter(url__in=id_to_url.keys())
+            .values('url')
+            .annotate(hits=Count('user_session', distinct=True))
+            .order_by('url')
+            .values_list('url', 'hits')
+        )
+
+        return Counter({id_to_url[id_].value: hits for id_, hits in ids_and_hits})
+
+    @classmethod
+    def get_count_for_objects(cls, request, objects: list[models.Model]) -> Counter[models.Model]:
+        url_to_object = {
+            request.build_absolute_uri(object.get_absolute_url()): object
+            for object in objects
+        }
+        counter = RequestFingerprint.get_count_for_urls(url_to_object.keys())
+        return Counter({object: counter[url] for url, object in url_to_object.items()})
 
 
 class BrowserFingerprint(AbstractFingerprint):

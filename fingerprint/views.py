@@ -12,7 +12,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from ipware import get_client_ip
 
-from .models import BrowserFingerprint, RequestFingerprint, UserSession
+from .models import BrowserFingerprint, RequestFingerprint, Url, UserSession
 
 
 def get_or_create_session_key(request) -> str:
@@ -28,12 +28,14 @@ def fingerprint(fn):
         field_name: RequestFingerprint._meta.get_field(field_name).max_length
         for field_name in ('user_agent', 'accept', 'content_encoding', 'content_language')
     }
+    max_length['url'] = Url._meta.get_field('value').max_length
 
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
         RequestFingerprint.objects.create(
             user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+            url=Url.from_value(request.build_absolute_uri()[:max_length['url']]),
             ip=get_client_ip(request)[0],
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:max_length['user_agent']],
             accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
@@ -111,8 +113,10 @@ class FingerprintView(TemplateView):
             raise BadRequest()
 
         session_key = get_or_create_session_key(request)
+        url_max_length = Url._meta.get_field('value').max_length
         BrowserFingerprint.objects.create(
             user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+            url=Url.from_value(request.META.get('HTTP_REFERER', '')[:url_max_length]),
             visitor_id=visitor_id,
         )
         return HttpResponse(status=200)

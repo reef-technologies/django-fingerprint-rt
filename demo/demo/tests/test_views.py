@@ -22,6 +22,7 @@ def test__request__anonymous(client, db):
     assert fingerprint.user_agent == ''
     assert now() - timedelta(seconds=5) <= fingerprint.created < now()
     assert fingerprint.user_session == user_session
+    assert fingerprint.url.value == 'http://testserver/request-test'
 
 
 def test__request__user_session__user_not_capture(client, db):
@@ -74,7 +75,7 @@ def test__browser__post_request(client, db):
     assert not RequestFingerprint.objects.exists()
     assert not BrowserFingerprint.objects.exists()
 
-    response = client.post('/_/', {'id': '12345'})
+    response = client.post('/_/', {'id': '12345'}, **{'HTTP_REFERER': 'http://localhost/somepath'})
     assert response.status_code == 200
 
     assert not RequestFingerprint.objects.exists()
@@ -83,6 +84,7 @@ def test__browser__post_request(client, db):
 
     assert fingerprint.visitor_id == '12345'
     assert now() - timedelta(seconds=5) <= fingerprint.created < now()
+    assert fingerprint.url.value == 'http://localhost/somepath'
 
 
 def test__user_session__auto_creation(db, client, user):

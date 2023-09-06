@@ -11,6 +11,7 @@ TEST_REQUIREMENTS = [
     'pytest', 'pytest-django',
     'ipdb', 'freezegun',
     'psycopg2-binary',
+    'django-debug-toolbar',
 ]
 
 nox.options.default_venv_backend = 'venv'

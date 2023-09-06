@@ -14,3 +14,9 @@ def user(db):
 def user_client(client, user) -> Client:
     client.force_login(user)
     return client
+
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    from fingerprint.models import Url
+    Url.from_value.cache_clear()
