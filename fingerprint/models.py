@@ -2,12 +2,13 @@ from __future__ import annotations
 from collections import Counter
 
 from functools import lru_cache
+from itertools import chain
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Count
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -77,7 +78,12 @@ class AbstractFingerprint(models.Model):
     @classmethod
     def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
 
-        id_to_url = {url_obj.id: url_obj for url in urls if (url_obj := Url.from_value(url))}
+        with transaction.atomic():
+            existing_urls = Url.objects.filter(value__in=urls)
+            non_existing_urls = set(urls) - {url.value for url in existing_urls}
+            new_urls = Url.objects.bulk_create(Url(value=value) for value in non_existing_urls) if non_existing_urls else []
+
+        id_to_url = {url_obj.id: url_obj for url_obj in chain(existing_urls, new_urls)}
 
         # this is SELECT COUNT(*) GROUP BY in django:
         ids_and_hits = (
