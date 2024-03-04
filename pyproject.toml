@@ -1,3 +1,30 @@
 [build-system]
+# requires = ["pdm-backend"]
+# build-backend = "pdm.backend"
 requires = ["setuptools>=42"]
 build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "django-fingerprint-rt"
+version = "0.0.2"
+description = "Users fingerprinting for your django app"
+authors = [
+    {name = "Aleksandr Goncharov", email = "aleksandr.goncharov@reef.pl"},
+]
+dependencies = [
+    "django-ipware~=6.0.4",
+    "django>=3.1",
+]
+requires-python = ">=3.9"
+readme = "README.md"
+license = {text = "MIT"}
+classifiers = [
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+]
+
+[project.urls]
+Homepage = "https://github.com/reef-technologies/django-fingerprint-rt"
+[tool.pdm]
+distribution = true
