@@ -129,6 +129,8 @@ class RequestFingerprint(AbstractFingerprint):
     accept = models.CharField(max_length=255, blank=True)
     content_encoding = models.CharField(max_length=255, blank=True)
     content_language = models.CharField(max_length=255, blank=True)
+    referer = models.CharField(max_length=255, blank=True)
+    cf_ipcountry = models.CharField(max_length=2, blank=True)
 
     def __str__(self):
         return f'{self.ip} {self.user_agent}'

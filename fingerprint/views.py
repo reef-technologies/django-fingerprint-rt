@@ -41,6 +41,8 @@ def fingerprint(fn):
             accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
             content_encoding=request.META.get('HTTP_CONTENT_ENCODING', '')[:max_length['content_encoding']],
             content_language=request.META.get('HTTP_CONTENT_LANGUAGE', '')[:max_length['content_language']],
+            referer=request.META.get('HTTP_REFERER', ''),
+            cf_ipcountry=request.META.get('HTTP_CF_IPCOUNTRY', ''),
         )
         return fn(request, *args, **kwargs)
 
