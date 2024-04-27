@@ -1,5 +1,5 @@
 from collections import Counter
-from fingerprint.models import RequestFingerprint
+from fingerprint.models import RequestFingerprint, Url
 
 
 def test__models__get_count_for_urls__logic(db, client, user):
@@ -50,3 +50,31 @@ def test__models__get_count_for_urls__num_queries(db, client, django_assert_num_
 
     with django_assert_num_queries(4):
         RequestFingerprint.get_count_for_urls([absolute_url1, absolute_url2])
+
+
+def test_url_from_value_cache(db, django_assert_num_queries, settings):
+    settings.FINGERPRINT_URL_CACHE_KEY = 'fingerprint_url'
+
+    url = 'http://example.com'
+    other_url = 'http://example.com/other'
+
+    with django_assert_num_queries(4):
+        instance = Url.from_value(url)
+
+    with django_assert_num_queries(0):
+        assert Url.from_value(url) == instance
+
+    with django_assert_num_queries(4):
+        Url.from_value(other_url)
+
+
+def test_url_from_value_cache_cache_disabled(db, django_assert_num_queries, settings):
+    settings.FINGERPRINT_URL_CACHE_KEY = None
+
+    url = 'http://example.com'
+
+    with django_assert_num_queries(4):
+        instance = Url.from_value(url)
+
+    with django_assert_num_queries(1):
+        assert Url.from_value(url) == instance
