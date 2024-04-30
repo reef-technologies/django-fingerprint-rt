@@ -34,6 +34,30 @@ def test__request__user_session__user_not_capture(client, db):
     assert not UserSession.objects.exists()
 
 
+def test__request_fingerprint__header_fields(client, db):
+    headers = {
+        'HTTP_USER_AGENT': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3',
+        'HTTP_ACCEPT': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'HTTP_CONTENT_ENCODING': 'gzip, deflate, br',
+        'HTTP_CONTENT_LANGUAGE': 'en-US',
+        'HTTP_REFERER': 'http://localhost/somepath',
+        'HTTP_CF_IPCOUNTRY': 'US',
+    }
+
+    response = client.get('/request-test', **headers)
+    assert response.status_code == 200
+
+    fingerprint = RequestFingerprint.objects.get()
+
+    assert fingerprint.user_agent == headers['HTTP_USER_AGENT']
+    assert fingerprint.accept == headers['HTTP_ACCEPT']
+    assert fingerprint.content_encoding == headers['HTTP_CONTENT_ENCODING']
+    assert fingerprint.content_language == headers['HTTP_CONTENT_LANGUAGE']
+    assert fingerprint.referer == headers['HTTP_REFERER']
+    assert fingerprint.cf_ipcountry == headers['HTTP_CF_IPCOUNTRY']
+
+
+
 def test__request__user_session__user_capture(user, user_client, db):
     UserSession.objects.all().delete()
 
