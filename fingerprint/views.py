@@ -26,7 +26,7 @@ def fingerprint(fn):
 
     max_length = {
         field_name: RequestFingerprint._meta.get_field(field_name).max_length
-        for field_name in ('user_agent', 'accept', 'content_encoding', 'content_language')
+        for field_name in ('user_agent', 'accept', 'content_encoding', 'content_language', 'referer', 'cf_ipcountry')
     }
     max_length['url'] = Url._meta.get_field('value').max_length
 
@@ -41,8 +41,8 @@ def fingerprint(fn):
             accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
             content_encoding=request.META.get('HTTP_CONTENT_ENCODING', '')[:max_length['content_encoding']],
             content_language=request.META.get('HTTP_CONTENT_LANGUAGE', '')[:max_length['content_language']],
-            referer=request.META.get('HTTP_REFERER', ''),
-            cf_ipcountry=request.META.get('HTTP_CF_IPCOUNTRY', ''),
+            referer=request.META.get('HTTP_REFERER', '')[:max_length['referer']],
+            cf_ipcountry=request.META.get('HTTP_CF_IPCOUNTRY', '')[:max_length['cf_ipcountry']],
         )
         return fn(request, *args, **kwargs)
 
