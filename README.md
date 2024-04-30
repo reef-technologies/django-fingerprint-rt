@@ -158,10 +158,16 @@ class MyView(ListView):
 
 # URL caching
 
-In order to reduce database load, there is a caching mechanism for URL model. It's enabled be default and will use Django's cache backend. To disable it (e.g. in tests), set `FINGERPRINT_URL_CACHE_KEY` to `None` in your settings.
+In order to reduce database load, there is a caching mechanism for URL model. It's enabled be default and will use Django's **default** cache backend. To use a custom cache backend, add this to your settings:
 
 ```python
-FINGERPRINT_URL_CACHE_KEY = None
+FINGERPRINT_CACHE = 'memcached'  # this has to be a valid key from settings.CACHES
+```
+
+To disable caching, set this to `None`:
+
+```python 
+FINGERPRINT_CACHE = None
 ```
 
 # Included licenses

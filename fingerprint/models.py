@@ -3,7 +3,7 @@ from collections import Counter
 
 from itertools import chain
 
-from django.core.cache import cache
+from django.core.cache import caches
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
@@ -55,12 +55,12 @@ class Url(models.Model):
 
     @classmethod
     def from_value(cls, value: str) -> Url:
-        cache_key = getattr(settings, 'FINGERPRINT_URL_CACHE_KEY', 'fingerprint_url')
-
-        if not cache_key:
+        cache_name = getattr(settings, 'FINGERPRINT_CACHE', 'default')
+        if cache_name is None:
             return cls.objects.get_or_create(value=value)[0]
 
-        cache_key = f'{cache_key}_{value}'
+        cache = caches[cache_name]
+        cache_key = f'fp_url_{value}'
 
         if url := cache.get(cache_key):
             return url

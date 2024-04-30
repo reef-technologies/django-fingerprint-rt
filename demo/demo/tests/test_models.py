@@ -1,4 +1,6 @@
 from collections import Counter
+
+from django.core.cache import caches
 from fingerprint.models import RequestFingerprint, Url
 
 
@@ -52,9 +54,7 @@ def test__models__get_count_for_urls__num_queries(db, client, django_assert_num_
         RequestFingerprint.get_count_for_urls([absolute_url1, absolute_url2])
 
 
-def test_url_from_value_cache(db, django_assert_num_queries, settings):
-    settings.FINGERPRINT_URL_CACHE_KEY = 'fingerprint_url'
-
+def test_url_from_value_cache(db, django_assert_num_queries):
     url = 'http://example.com'
     other_url = 'http://example.com/other'
 
@@ -68,8 +68,31 @@ def test_url_from_value_cache(db, django_assert_num_queries, settings):
         Url.from_value(other_url)
 
 
+def test_url_from_value_alternative_cache(db, django_assert_num_queries, settings, tmpdir):
+    settings.CACHES['alternative'] = {
+        "BACKEND": "django.core.cache.backends.filebased.FileBasedCache",
+        "LOCATION": str(tmpdir),
+    }
+
+    settings.FINGERPRINT_CACHE = 'alternative'
+
+    url = 'http://example.com'
+
+    with django_assert_num_queries(4):
+        instance = Url.from_value(url)
+
+    with django_assert_num_queries(0):
+        assert Url.from_value(url) == instance
+
+    settings.FINGERPRINT_CACHE = 'default'
+
+    with django_assert_num_queries(1):
+        assert Url.from_value(url) == instance
+
+
+
 def test_url_from_value_cache_cache_disabled(db, django_assert_num_queries, settings):
-    settings.FINGERPRINT_URL_CACHE_KEY = None
+    settings.FINGERPRINT_CACHE = None
 
     url = 'http://example.com'
 
