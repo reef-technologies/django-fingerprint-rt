@@ -57,6 +57,29 @@ def test__request_fingerprint__header_fields(client, db):
     assert fingerprint.cf_ipcountry == headers['HTTP_CF_IPCOUNTRY']
 
 
+def test__request__fingerprint__header_fields_overflow(client, db):
+    headers = {
+        'HTTP_USER_AGENT': 'a' * 300,
+        'HTTP_ACCEPT': 'b' * 300,
+        'HTTP_CONTENT_ENCODING': 'c' * 300,
+        'HTTP_CONTENT_LANGUAGE': 'd' * 300,
+        'HTTP_REFERER': 'e' * 300,
+        'HTTP_CF_IPCOUNTRY': 'f' * 300,
+    }
+
+    response = client.get('/request-test', **headers)
+    assert response.status_code == 200
+
+    fingerprint = RequestFingerprint.objects.get()
+
+    assert fingerprint.user_agent == headers['HTTP_USER_AGENT'][:255]
+    assert fingerprint.accept == headers['HTTP_ACCEPT'][:255]
+    assert fingerprint.content_encoding == headers['HTTP_CONTENT_ENCODING'][:255]
+    assert fingerprint.content_language == headers['HTTP_CONTENT_LANGUAGE'][:255]
+    assert fingerprint.referer == headers['HTTP_REFERER'][:255]
+    assert fingerprint.cf_ipcountry == headers['HTTP_CF_IPCOUNTRY'][:16]
+
+
 
 def test__request__user_session__user_capture(user, user_client, db):
     UserSession.objects.all().delete()
