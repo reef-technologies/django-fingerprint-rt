@@ -63,7 +63,7 @@ def test__request__fingerprint__header_fields_overflow(client, db):
         'HTTP_ACCEPT': 'b' * 300,
         'HTTP_CONTENT_ENCODING': 'c' * 300,
         'HTTP_CONTENT_LANGUAGE': 'd' * 300,
-        'HTTP_REFERER': 'e' * 300,
+        'HTTP_REFERER': 'e' * 2050,
         'HTTP_CF_IPCOUNTRY': 'f' * 300,
     }
 
@@ -76,7 +76,7 @@ def test__request__fingerprint__header_fields_overflow(client, db):
     assert fingerprint.accept == headers['HTTP_ACCEPT'][:255]
     assert fingerprint.content_encoding == headers['HTTP_CONTENT_ENCODING'][:255]
     assert fingerprint.content_language == headers['HTTP_CONTENT_LANGUAGE'][:255]
-    assert fingerprint.referer == headers['HTTP_REFERER'][:255]
+    assert fingerprint.referer == headers['HTTP_REFERER'][:2047]
     assert fingerprint.cf_ipcountry == headers['HTTP_CF_IPCOUNTRY'][:16]
 
 
