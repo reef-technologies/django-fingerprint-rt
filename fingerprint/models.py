@@ -1,9 +1,9 @@
 from __future__ import annotations
 from collections import Counter
 
-from functools import lru_cache
 from itertools import chain
 
+from django.core.cache import caches
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
@@ -54,9 +54,20 @@ class Url(models.Model):
         return self.value
 
     @classmethod
-    @lru_cache(maxsize=1024)
     def from_value(cls, value: str) -> Url:
-        return cls.objects.get_or_create(value=value)[0]
+        cache_name = getattr(settings, 'FINGERPRINT_CACHE', 'default')
+        if cache_name is None:
+            return cls.objects.get_or_create(value=value)[0]
+
+        cache = caches[cache_name]
+        cache_key = f'fp_url_{value}'
+
+        if url := cache.get(cache_key):
+            return url
+
+        url = cls.objects.get_or_create(value=value)[0]
+        cache.set(cache_key, url)
+        return url
 
 
 class AbstractFingerprint(models.Model):
@@ -129,6 +140,8 @@ class RequestFingerprint(AbstractFingerprint):
     accept = models.CharField(max_length=255, blank=True)
     content_encoding = models.CharField(max_length=255, blank=True)
     content_language = models.CharField(max_length=255, blank=True)
+    referer = models.CharField(max_length=2047, blank=True)
+    cf_ipcountry = models.CharField(max_length=16, blank=True)
 
     def __str__(self):
         return f'{self.ip} {self.user_agent}'

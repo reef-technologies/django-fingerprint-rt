@@ -1,6 +1,7 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import Client
+from django.core.cache import caches
 
 
 @pytest.fixture
@@ -17,6 +18,8 @@ def user_client(client, user) -> Client:
 
 
 @pytest.fixture(autouse=True)
-def clear_cache():
-    from fingerprint.models import Url
-    Url.from_value.cache_clear()
+def clear_cache(settings):
+    yield
+
+    for cache in settings.CACHES.keys():
+        caches[cache].clear()
