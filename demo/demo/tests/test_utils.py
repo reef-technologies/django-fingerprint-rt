@@ -1,13 +1,14 @@
 from collections import Counter
+
 from fingerprint.models import RequestFingerprint
 
 
 def test__utils__get_num_sessions(db, client, user):
-    url1 = '/request-test'
-    url2 = '/request-test?param=1'
+    url1 = "/request-test"
+    url2 = "/request-test?param=1"
 
-    absolute_url1 = f'http://testserver{url1}'
-    absolute_url2 = f'http://testserver{url2}'
+    absolute_url1 = f"http://testserver{url1}"
+    absolute_url2 = f"http://testserver{url2}"
 
     assert RequestFingerprint.get_count_for_urls([absolute_url1]) == Counter()
     assert RequestFingerprint.get_count_for_urls([absolute_url2]) == Counter()

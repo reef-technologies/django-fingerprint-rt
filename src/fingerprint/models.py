@@ -1,13 +1,13 @@
 from __future__ import annotations
-from collections import Counter
 
+from collections import Counter
 from itertools import chain
 
-from django.core.cache import caches
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
+from django.core.cache import caches
 from django.db import models, transaction
 from django.db.models import Count
 from django.db.models.signals import post_save
@@ -19,7 +19,9 @@ class UserSession(models.Model):
     # since other session backends may be used, plus django doesn't store user-session
     # mapping, so we need to have additional table for that
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True, related_name='sessions')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True, related_name="sessions"
+    )
     session_key = models.CharField(max_length=40)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -28,10 +30,10 @@ class UserSession(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['session_key', 'user'], name='unique_user_session'),
+            models.UniqueConstraint(fields=["session_key", "user"], name="unique_user_session"),
         ]
         indexes = [
-            models.Index(fields=['user', '-created']),
+            models.Index(fields=["user", "-created"]),
         ]
 
     def get_value_display(self) -> str:
@@ -40,7 +42,7 @@ class UserSession(models.Model):
 
 @receiver(post_save, sender=Session)
 def connect_user_to_session(sender, instance, created, **kwargs):
-    if user_id := instance.get_decoded().get('_auth_user_id'):
+    if user_id := instance.get_decoded().get("_auth_user_id"):
         UserSession.objects.update_or_create(
             session_key=instance.session_key,
             defaults=dict(user_id=user_id),
@@ -55,12 +57,12 @@ class Url(models.Model):
 
     @classmethod
     def from_value(cls, value: str) -> Url:
-        cache_name = getattr(settings, 'FINGERPRINT_CACHE', 'default')
+        cache_name = getattr(settings, "FINGERPRINT_CACHE", "default")
         if cache_name is None:
             return cls.objects.get_or_create(value=value)[0]
 
         cache = caches[cache_name]
-        cache_key = f'fp_url_{value}'
+        cache_key = f"fp_url_{value}"
 
         if url := cache.get(cache_key):
             return url
@@ -71,15 +73,15 @@ class Url(models.Model):
 
 
 class AbstractFingerprint(models.Model):
-    user_session = models.ForeignKey(UserSession, on_delete=models.CASCADE, related_name='%(model_name)ss')
-    url = models.ForeignKey(Url, on_delete=models.CASCADE, related_name='%(model_name)ss')
+    user_session = models.ForeignKey(UserSession, on_delete=models.CASCADE, related_name="%(model_name)ss")
+    url = models.ForeignKey(Url, on_delete=models.CASCADE, related_name="%(model_name)ss")
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         abstract = True
         indexes = [
-            models.Index(fields=['user_session', '-created']),
-            models.Index(fields=['url', 'user_session']),
+            models.Index(fields=["user_session", "-created"]),
+            models.Index(fields=["url", "user_session"]),
         ]
 
     @property
@@ -88,32 +90,29 @@ class AbstractFingerprint(models.Model):
 
     @classmethod
     def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
-
         with transaction.atomic():
             existing_urls = Url.objects.filter(value__in=urls)
             non_existing_urls = set(urls) - {url.value for url in existing_urls}
-            new_urls = Url.objects.bulk_create(Url(value=value) for value in non_existing_urls) if non_existing_urls else []
+            new_urls = (
+                Url.objects.bulk_create(Url(value=value) for value in non_existing_urls) if non_existing_urls else []
+            )
 
         id_to_url = {url_obj.id: url_obj for url_obj in chain(existing_urls, new_urls)}
 
         # this is SELECT COUNT(*) GROUP BY in django:
         ids_and_hits = (
-            cls.objects
-            .filter(url__in=id_to_url.keys())
-            .values('url')
-            .annotate(hits=Count('user_session', distinct=True))
-            .order_by('url')
-            .values_list('url', 'hits')
+            cls.objects.filter(url__in=id_to_url.keys())
+            .values("url")
+            .annotate(hits=Count("user_session", distinct=True))
+            .order_by("url")
+            .values_list("url", "hits")
         )
 
         return Counter({id_to_url[id_].value: hits for id_, hits in ids_and_hits})
 
     @classmethod
     def get_count_for_objects(cls, request, objects: list[models.Model]) -> Counter[models.Model]:
-        url_to_object = {
-            request.build_absolute_uri(object.get_absolute_url()): object
-            for object in objects
-        }
+        url_to_object = {request.build_absolute_uri(object.get_absolute_url()): object for object in objects}
         counter = RequestFingerprint.get_count_for_urls(url_to_object.keys())
         return Counter({object: counter[url] for url, object in url_to_object.items()})
 
@@ -127,7 +126,7 @@ class BrowserFingerprint(AbstractFingerprint):
     class Meta(AbstractFingerprint.Meta):
         indexes = [
             *AbstractFingerprint.Meta.indexes,
-            models.Index(fields=['visitor_id', '-created']),
+            models.Index(fields=["visitor_id", "-created"]),
         ]
 
     def get_value_display(self) -> str:
@@ -144,20 +143,21 @@ class RequestFingerprint(AbstractFingerprint):
     cf_ipcountry = models.CharField(max_length=16, blank=True)
 
     def __str__(self):
-        return f'{self.ip} {self.user_agent}'
+        return f"{self.ip} {self.user_agent}"
 
     class Meta(AbstractFingerprint.Meta):
         indexes = [
             *AbstractFingerprint.Meta.indexes,
-            models.Index(fields=['ip', '-created']),
-            models.Index(fields=['user_agent', '-created']),
+            models.Index(fields=["ip", "-created"]),
+            models.Index(fields=["user_agent", "-created"]),
         ]
 
     def get_value_display(self) -> str:
-        return self.user_agent[:24] + '...'
+        return self.user_agent[:24] + "..."
 
 
 class UserFingerprint(get_user_model()):
-    """ This is just a proxy model for admin site, since django doesn't allow to register two admins for the same model. """
+    """This is just a proxy model for admin site, since django doesn't allow to register two admins for the same model."""
+
     class Meta:
         proxy = True

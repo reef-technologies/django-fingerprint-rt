@@ -1,4 +1,6 @@
 # django-fingerprint-rt
+&nbsp;[![Continuous Integration](https://github.com/reef-technologies/django-fingerprint-rt/workflows/Continuous%20Integration/badge.svg)](https://github.com/reef-technologies/django-fingerprint-rt/actions?query=workflow%3A%22Continuous+Integration%22)&nbsp;[![License](https://img.shields.io/pypi/l/fingerprint.svg?label=License)](https://pypi.python.org/pypi/fingerprint)&nbsp;[![python versions](https://img.shields.io/pypi/pyversions/fingerprint.svg?label=python%20versions)](https://pypi.python.org/pypi/fingerprint)&nbsp;[![PyPI version](https://img.shields.io/pypi/v/fingerprint.svg?label=PyPI%20version)](https://pypi.python.org/pypi/fingerprint)
+
 When you need to know your users a bit better.
 
 This app includes browser (== frontend) and request (== backend) fingerprinting of users.
@@ -7,7 +9,12 @@ This may be helpful for better understanding users of the application, for examp
 
 ![Screenshot_2023-05-02_16-02-02](https://user-images.githubusercontent.com/73276794/235674052-5c5150be-e1c3-4a85-9646-244c939db0fb.jpg)
 
-# Setup
+
+
+## Usage
+
+> [!IMPORTANT]
+> This package uses [ApiVer](#versioning), make sure to import `fingerprint.v1`.
 
 Add `fingerprint` to `INSTALLED_APPS`:
 
@@ -73,7 +80,7 @@ In order to enable it for some view:
 from django.views.generic import TemplateView
 from django.utils.decorators import method_decorator
 
-from fingerprint.views import fingerprint
+from src.fingerprint.views import fingerprint
 
 @fingerprint
 def my_view(request):
@@ -193,3 +200,39 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+
+## Versioning
+
+This package uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+TL;DR you are safe to use [compatible release version specifier](https://packaging.python.org/en/latest/specifications/version-specifiers/#compatible-release) `~=MAJOR.MINOR` in your `pyproject.toml` or `requirements.txt`.
+
+Additionally, this package uses [ApiVer](https://www.youtube.com/watch?v=FgcoAKchPjk) to further reduce the risk of breaking changes.
+This means, the public API of this package is explicitly versioned, e.g. `fingerprint.v1`, and will not change in a backwards-incompatible way even when `fingerprint.v2` is released.
+
+Internal packages, i.e. prefixed by `fingerprint._` do not share these guarantees and may change in a backwards-incompatible way at any time even in patch releases.
+
+
+## Development
+
+
+Pre-requisites:
+- [pdm](https://pdm.fming.dev/)
+- [nox](https://nox.thea.codes/en/stable/)
+- [docker](https://www.docker.com/) and [docker compose plugin](https://docs.docker.com/compose/)
+
+
+Ideally, you should run `nox -t format lint` before every commit to ensure that the code is properly formatted and linted.
+Before submitting a PR, make sure that tests pass as well, you can do so using:
+```
+nox -t check # equivalent to `nox -t format lint test`
+```
+
+If you wish to install dependencies into `.venv` so your IDE can pick them up, you can do so using:
+```
+pdm install --dev
+```
+
+### Release process
+
+Run `nox -s make_release -- X.Y.Z` where `X.Y.Z` is the version you're releasing and follow the printed instructions.

@@ -1,0 +1,18 @@
+{
+  "template": "https://github.com/reef-technologies/cookiecutter-rt-pkg",
+  "commit": "9098eed1a7c4e44e568f990cb111e9ccb6bf78ca",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "package_name": "fingerprint",
+      "repository_github_url": "https://github.com/reef-technologies/django-fingerprint-rt",
+      "is_django_package": "y",
+      "_jinja2_env_vars": {
+        "block_start_string": "# COOKIECUTTER{%",
+        "block_end_string": "%}"
+      },
+      "_template": "https://github.com/reef-technologies/cookiecutter-rt-pkg"
+    }
+  },
+  "directory": null
+}

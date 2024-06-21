@@ -22,27 +22,27 @@ def get_or_create_session_key(request) -> str:
 
 
 def fingerprint(fn):
-    """ A decorator which creates a backend Fingerprint object for the current request. """
+    """A decorator which creates a backend Fingerprint object for the current request."""
 
     max_length = {
         field_name: RequestFingerprint._meta.get_field(field_name).max_length
-        for field_name in ('user_agent', 'accept', 'content_encoding', 'content_language', 'referer', 'cf_ipcountry')
+        for field_name in ("user_agent", "accept", "content_encoding", "content_language", "referer", "cf_ipcountry")
     }
-    max_length['url'] = Url._meta.get_field('value').max_length
+    max_length["url"] = Url._meta.get_field("value").max_length
 
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
         RequestFingerprint.objects.create(
             user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
-            url=Url.from_value(request.build_absolute_uri()[:max_length['url']]),
+            url=Url.from_value(request.build_absolute_uri()[: max_length["url"]]),
             ip=get_client_ip(request)[0],
-            user_agent=request.META.get('HTTP_USER_AGENT', '')[:max_length['user_agent']],
-            accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
-            content_encoding=request.META.get('HTTP_CONTENT_ENCODING', '')[:max_length['content_encoding']],
-            content_language=request.META.get('HTTP_CONTENT_LANGUAGE', '')[:max_length['content_language']],
-            referer=request.META.get('HTTP_REFERER', '')[:max_length['referer']],
-            cf_ipcountry=request.META.get('HTTP_CF_IPCOUNTRY', '')[:max_length['cf_ipcountry']],
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[: max_length["user_agent"]],
+            accept=request.META.get("HTTP_ACCEPT", "")[: max_length["accept"]],
+            content_encoding=request.META.get("HTTP_CONTENT_ENCODING", "")[: max_length["content_encoding"]],
+            content_language=request.META.get("HTTP_CONTENT_LANGUAGE", "")[: max_length["content_language"]],
+            referer=request.META.get("HTTP_REFERER", "")[: max_length["referer"]],
+            cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
         )
         return fn(request, *args, **kwargs)
 
@@ -71,9 +71,9 @@ def remember_user_session(fn):
     return wrapper
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-@method_decorator(remember_user_session, name='get')
-@method_decorator(fingerprint, name='get')
+@method_decorator(csrf_exempt, name="dispatch")
+@method_decorator(remember_user_session, name="get")
+@method_decorator(fingerprint, name="get")
 class FingerprintView(TemplateView):
     """
     Multi-purpose fingerprinting view.
@@ -94,31 +94,31 @@ class FingerprintView(TemplateView):
     By default only relative paths are allowed.
     """
 
-    template_name = 'fingerprint/fingerprint.html'
+    template_name = "fingerprint/fingerprint.html"
     redirect_in = timedelta(seconds=3)
     allowed_hosts: Optional[set] = None
 
     def get_context_data(self, **kwargs):
-        redirect_url = iri_to_uri(self.request.GET.get('next', '/'))
+        redirect_url = iri_to_uri(self.request.GET.get("next", "/"))
         if not url_has_allowed_host_and_scheme(redirect_url, self.allowed_hosts):
             raise DisallowedRedirect()
 
         return {
-            'redirect_in': self.redirect_in,
-            'redirect_url': redirect_url,
+            "redirect_in": self.redirect_in,
+            "redirect_url": redirect_url,
         }
 
     def post(self, request, *args, **kwargs):
         try:
-            visitor_id = request.POST['id']
+            visitor_id = request.POST["id"]
         except MultiValueDictKeyError:
             raise BadRequest()
 
         session_key = get_or_create_session_key(request)
-        url_max_length = Url._meta.get_field('value').max_length
+        url_max_length = Url._meta.get_field("value").max_length
         BrowserFingerprint.objects.create(
             user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
-            url=Url.from_value(request.META.get('HTTP_REFERER', '')[:url_max_length]),
+            url=Url.from_value(request.META.get("HTTP_REFERER", "")[:url_max_length]),
             visitor_id=visitor_id,
         )
         return HttpResponse(status=200)

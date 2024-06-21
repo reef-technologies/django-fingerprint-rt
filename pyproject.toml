@@ -1,30 +1,140 @@
-[build-system]
-# requires = ["pdm-backend"]
-# build-backend = "pdm.backend"
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
-
-
 [project]
 name = "django-fingerprint-rt"
 version = "0.0.2"
+requires-python = ">=3.9"
 description = "Users fingerprinting for your django app"
+keywords = []
+license = {text = "MIT"}
+readme = "README.md"
 authors = [
+    {name = "Reef Technologies", email = "opensource@reef.pl"},
     {name = "Aleksandr Goncharov", email = "aleksandr.goncharov@reef.pl"},
 ]
 dependencies = [
     "django-ipware~=6.0.4",
     "django>=3.1",
 ]
-requires-python = ">=3.9"
-readme = "README.md"
-license = {text = "MIT"}
 classifiers = [
+    "Framework :: Django",
+    "Framework :: Django :: 4.2",
     "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries",
+    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 [project.urls]
-Homepage = "https://github.com/reef-technologies/django-fingerprint-rt"
+"Source" = "https://github.com/reef-technologies/django-fingerprint-rt"
+"Issue Tracker" = "https://github.com/reef-technologies/django-fingerprint-rt/issues"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]  # allow for `import tests` in test files
+target_package_name = "fingerprint"  # required by pytest-apiver
+DJANGO_SETTINGS_MODULE="tests.settings"
+
 [tool.pdm]
 distribution = true
+
+[tool.pdm.dev-dependencies]
+test = [
+    "freezegun",
+    "pytest",
+    "pytest-apiver @ git+https://github.com/reef-technologies/pytest_apiver.git",
+    "pytest-asyncio",
+    "pytest-django",
+    "pytest-xdist",
+]
+lint = [
+    "codespell[toml]",
+    "django-stubs>=1.12.0",
+    "mypy>=1.8",
+    "ruff",
+    "types-freezegun",
+    "types-python-dateutil",
+    "types-requests",
+]
+release = [
+    "towncrier",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "D",
+    "E", "F", "I", "UP",
+    "TCH005",
+]
+ignore = [
+    "D100", "D105", "D107", "D200", "D202", "D203", "D205", "D212", "D400", "D401", "D415",
+    "D101", "D102", "D103", "D104", # TODO remove once we have docstring for all public methods
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"test/**" = ["D", "F403", "F405"]
+
+[tool.codespell]
+skip = "*.min.js,pdm.lock"
+ignore-words-list = "datas"
+
+[tool.towncrier]
+directory = "changelog.d"
+filename = "CHANGELOG.md"
+start_string = "<!-- towncrier release notes start -->\n"
+underlines = ["", "", ""]
+title_format = "## [{version}](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v{version}) - {project_date}"
+issue_format = "[#{issue}](https://github.com/reef-technologies/django-fingerprint-rt/issues/{issue})"
+
+[[tool.towncrier.type]]
+directory = "removed"
+name = "Removed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "changed"
+name = "Changed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "fixed"
+name = "Fixed"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "deprecated"
+name = "Deprecated"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "added"
+name = "Added"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "doc"
+name = "Doc"
+showcontent = true
+
+[[tool.towncrier.type]]
+directory = "infrastructure"
+name = "Infrastructure"
+showcontent = true
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = [
+    "nox",
+    "pytest",
+    "tests.*",
+]
+ignore_missing_imports = true
