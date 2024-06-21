@@ -1,6 +1,5 @@
 [project]
 name = "django-fingerprint-rt"
-version = "0.0.2"
 requires-python = ">=3.9"
 description = "Users fingerprinting for your django app"
 keywords = []
@@ -25,6 +24,11 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+dynamic = [
+    "version",
+]
+dependencies = [
+]
 
 [project.urls]
 "Source" = "https://github.com/reef-technologies/django-fingerprint-rt"
@@ -34,13 +38,11 @@ classifiers = [
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-[tool.pytest.ini_options]
-pythonpath = [".", "demo"]  # allow for `import tests` in test files
-target_package_name = "fingerprint"  # required by pytest-apiver
-DJANGO_SETTINGS_MODULE="demo.settings"
-
 [tool.pdm]
 distribution = true
+
+[tool.pdm.version]
+source = "scm"
 
 [tool.pdm.dev-dependencies]
 test = [
@@ -64,6 +66,11 @@ lint = [
 release = [
     "towncrier",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "demo"]  # allow for `import tests` in test files
+target_package_name = "fingerprint"  # required by pytest-apiver
+DJANGO_SETTINGS_MODULE="demo.settings"
 
 [tool.ruff]
 line-length = 120
