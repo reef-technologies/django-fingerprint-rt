@@ -135,7 +135,9 @@ There is a helper template tag which will show hit count for any url: `hit_count
 {% hit_count request.build_absolute_uri %} views registered for this page
 ```
 
-One downside of this approach is that it will make a database query for each invocation. So this tag is handy for `DetailView` where only one object is present, but for bulk views (like `ListView`), it is recommened to use `get_count_for_urls` or `get_count_for_objects` class methods.
+One downside of this approach is that it will make a database query for each invocation.
+So this tag is handy for `DetailView` where only one object is present, but for bulk views (like `ListView`),
+it is recommended to use `get_count_for_urls` or `get_count_for_objects` class methods.
 
 Following will return a `collections.Counter` object with number of hits for each url, making a single database query:
 ```python

@@ -83,7 +83,7 @@ ignore = [
 "test/**" = ["D", "F403", "F405"]
 
 [tool.codespell]
-skip = "*.min.js,pdm.lock"
+skip = "*.js,*.min.js,pdm.lock"
 ignore-words-list = "datas"
 
 [tool.towncrier]
