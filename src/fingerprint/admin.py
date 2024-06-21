@@ -5,7 +5,7 @@ from itertools import chain, islice
 from typing import Callable
 
 from django.contrib import admin
-from django.db.models import Count, Prefetch
+from django.db.models import Count, Max, Prefetch, Q
 from django.urls import reverse
 from django.utils.html import format_html
 from django.utils.timezone import now
