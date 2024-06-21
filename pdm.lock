@@ -5,7 +5,7 @@
 groups = ["default", "lint", "release", "test"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:224418e50e58b5fe28b5159298dc27e69c8befe20cf08a0298a7390af20a1181"
+content_hash = "sha256:ca4d426f158b75865d0200997b7471785de908207e18d61cd282011a78fb076e"
 
 [[package]]
 name = "asgiref"
@@ -380,14 +380,16 @@ files = [
 
 [[package]]
 name = "pytest-apiver"
-version = "0.0.1"
+version = "0.1.0"
 requires_python = ">=3.9"
-git = "https://github.com/reef-technologies/pytest_apiver.git"
-revision = "9d77f421d8b9d21d3f7fb7dc6caf4f9f98fb71a9"
 summary = ""
 groups = ["test"]
 dependencies = [
     "pytest",
+]
+files = [
+    {file = "pytest_apiver-0.1.0-py3-none-any.whl", hash = "sha256:fc86ec3de77506a26aa232858f94c5bf397b1a0798ba7c0772061017119f3420"},
+    {file = "pytest_apiver-0.1.0.tar.gz", hash = "sha256:105023e626a3e3e59c59efb3f4268245b09ddfb3d8e627f67e4f411d77642e67"},
 ]
 
 [[package]]

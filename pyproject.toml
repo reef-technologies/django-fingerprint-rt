@@ -46,7 +46,7 @@ source = "scm"
 test = [
     "freezegun",
     "pytest",
-    "pytest-apiver @ git+https://github.com/reef-technologies/pytest_apiver.git",
+    "pytest-apiver",
     "pytest-asyncio",
     "pytest-django",
     "pytest-xdist",
