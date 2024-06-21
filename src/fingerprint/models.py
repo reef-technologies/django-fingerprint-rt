@@ -28,7 +28,7 @@ class UserSession(models.Model):
     def __str__(self):
         return self.session_key
 
-    class Meta:
+    class Meta:  # noqa: D106
         constraints = [
             models.UniqueConstraint(fields=["session_key", "user"], name="unique_user_session"),
         ]
@@ -77,7 +77,7 @@ class AbstractFingerprint(models.Model):
     url = models.ForeignKey(Url, on_delete=models.CASCADE, related_name="%(model_name)ss")
     created = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
+    class Meta:  # noqa: D106
         abstract = True
         indexes = [
             models.Index(fields=["user_session", "-created"]),
@@ -123,7 +123,7 @@ class BrowserFingerprint(AbstractFingerprint):
     def __str__(self) -> str:
         return self.visitor_id
 
-    class Meta(AbstractFingerprint.Meta):
+    class Meta(AbstractFingerprint.Meta):  # noqa: D106
         indexes = [
             *AbstractFingerprint.Meta.indexes,
             models.Index(fields=["visitor_id", "-created"]),
@@ -145,7 +145,7 @@ class RequestFingerprint(AbstractFingerprint):
     def __str__(self):
         return f"{self.ip} {self.user_agent}"
 
-    class Meta(AbstractFingerprint.Meta):
+    class Meta(AbstractFingerprint.Meta):  # noqa: D106
         indexes = [
             *AbstractFingerprint.Meta.indexes,
             models.Index(fields=["ip", "-created"]),
@@ -157,7 +157,7 @@ class RequestFingerprint(AbstractFingerprint):
 
 
 class UserFingerprint(get_user_model()):
-    """This is just a proxy model for admin site, since django doesn't allow to register two admins for the same model."""
+    """Proxy model for admin site, since django doesn't allow to register two admins for the same model."""
 
-    class Meta:
+    class Meta:  # noqa: D106
         proxy = True
