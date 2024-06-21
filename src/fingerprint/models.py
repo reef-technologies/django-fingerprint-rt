@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import typing
 from collections import Counter
 from itertools import chain
 
@@ -13,17 +14,20 @@ from django.db.models import Count
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+if typing.TYPE_CHECKING:
+    from django.shortcuts import SupportsGetAbsoluteUrl
+
 
 class UserSession(models.Model):
     # by default, django stores session data in database; however, we cannot rely on it,
     # since other session backends may be used, plus django doesn't store user-session
     # mapping, so we need to have additional table for that
 
-    user = models.ForeignKey(
+    user: models.ForeignKey = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, blank=True, null=True, related_name="sessions"
     )
-    session_key = models.CharField(max_length=40)
-    created = models.DateTimeField(auto_now_add=True)
+    session_key: models.CharField = models.CharField(max_length=40)
+    created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.session_key
@@ -50,7 +54,7 @@ def connect_user_to_session(sender, instance, created, **kwargs):
 
 
 class Url(models.Model):
-    value = models.CharField(max_length=255, unique=True)
+    value: models.CharField = models.CharField(max_length=255, unique=True)
 
     def __str__(self) -> str:
         return self.value
@@ -73,9 +77,11 @@ class Url(models.Model):
 
 
 class AbstractFingerprint(models.Model):
-    user_session = models.ForeignKey(UserSession, on_delete=models.CASCADE, related_name="%(model_name)ss")
-    url = models.ForeignKey(Url, on_delete=models.CASCADE, related_name="%(model_name)ss")
-    created = models.DateTimeField(auto_now_add=True)
+    user_session: models.ForeignKey = models.ForeignKey(
+        UserSession, on_delete=models.CASCADE, related_name="%(model_name)ss"
+    )
+    url: models.ForeignKey = models.ForeignKey(Url, on_delete=models.CASCADE, related_name="%(model_name)ss")
+    created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
     class Meta:  # noqa: D106
         abstract = True
@@ -97,7 +103,7 @@ class AbstractFingerprint(models.Model):
                 Url.objects.bulk_create(Url(value=value) for value in non_existing_urls) if non_existing_urls else []
             )
 
-        id_to_url = {url_obj.id: url_obj for url_obj in chain(existing_urls, new_urls)}
+        id_to_url = {url_obj.pk: url_obj for url_obj in chain(existing_urls, new_urls)}
 
         # this is SELECT COUNT(*) GROUP BY in django:
         ids_and_hits = (
@@ -111,14 +117,14 @@ class AbstractFingerprint(models.Model):
         return Counter({id_to_url[id_].value: hits for id_, hits in ids_and_hits})
 
     @classmethod
-    def get_count_for_objects(cls, request, objects: list[models.Model]) -> Counter[models.Model]:
+    def get_count_for_objects(cls, request, objects: list[SupportsGetAbsoluteUrl]) -> Counter[SupportsGetAbsoluteUrl]:
         url_to_object = {request.build_absolute_uri(object.get_absolute_url()): object for object in objects}
-        counter = RequestFingerprint.get_count_for_urls(url_to_object.keys())
+        counter = RequestFingerprint.get_count_for_urls(sorted(url_to_object.keys()))
         return Counter({object: counter[url] for url, object in url_to_object.items()})
 
 
 class BrowserFingerprint(AbstractFingerprint):
-    visitor_id = models.CharField(max_length=255)
+    visitor_id: models.CharField = models.CharField(max_length=255)
 
     def __str__(self) -> str:
         return self.visitor_id
@@ -134,13 +140,13 @@ class BrowserFingerprint(AbstractFingerprint):
 
 
 class RequestFingerprint(AbstractFingerprint):
-    ip = models.GenericIPAddressField(blank=True, null=True)
-    user_agent = models.CharField(max_length=255, blank=True)
-    accept = models.CharField(max_length=255, blank=True)
-    content_encoding = models.CharField(max_length=255, blank=True)
-    content_language = models.CharField(max_length=255, blank=True)
-    referer = models.CharField(max_length=2047, blank=True)
-    cf_ipcountry = models.CharField(max_length=16, blank=True)
+    ip: models.GenericIPAddressField = models.GenericIPAddressField(blank=True, null=True)
+    user_agent: models.CharField = models.CharField(max_length=255, blank=True)
+    accept: models.CharField = models.CharField(max_length=255, blank=True)
+    content_encoding: models.CharField = models.CharField(max_length=255, blank=True)
+    content_language: models.CharField = models.CharField(max_length=255, blank=True)
+    referer: models.CharField = models.CharField(max_length=2047, blank=True)
+    cf_ipcountry: models.CharField = models.CharField(max_length=16, blank=True)
 
     def __str__(self):
         return f"{self.ip} {self.user_agent}"
@@ -156,7 +162,7 @@ class RequestFingerprint(AbstractFingerprint):
         return self.user_agent[:24] + "..."
 
 
-class UserFingerprint(get_user_model()):
+class UserFingerprint(get_user_model()):  # type: ignore
     """Proxy model for admin site, since django doesn't allow to register two admins for the same model."""
 
     class Meta:  # noqa: D106

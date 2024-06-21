@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Iterator
 from datetime import timedelta
 from functools import wraps
@@ -16,7 +18,7 @@ try:
     from itertools import pairwise
 except ImportError:
 
-    def pairwise(items):
+    def pairwise(items):  # type: ignore
         return zip(items, items[1:])
 
 
@@ -89,14 +91,14 @@ class UserSessionAdmin(admin.ModelAdmin):
 
 
 class FingerprintBaseAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display: tuple[str, ...] = (
         "id",
         "user_session",
         "get_user",
     )
-    list_filter = ("created",)
-    ordering = ("-created",)
-    search_fields = (
+    list_filter: tuple[str, ...] = ("created",)
+    ordering: tuple[str, ...] = ("-created",)
+    search_fields: tuple[str, ...] = (
         "user_session__session_key",
         "user_session__user__email",
         "user_session__user__username",
@@ -144,7 +146,7 @@ class RequestFingerprintAdmin(FingerprintBaseAdmin):
 
 class NumFingerprintsListFilter(admin.SimpleListFilter):
     groups = list(pairwise((1, 4, 6, 11, 21, 10_001)))
-    query_parameter = None
+    query_parameter: str
 
     def lookups(self, request, model_admin):
         return [(i, f"{min_}-{max_-1}") for i, (min_, max_) in enumerate(self.groups)]

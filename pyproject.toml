@@ -133,6 +133,7 @@ showcontent = true
 
 [[tool.mypy.overrides]]
 module = [
+    "ipware",
     "nox",
     "pytest",
     "tests.*",
