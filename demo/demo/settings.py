@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 
 from __future__ import annotations
 
-from os import environ
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -86,19 +85,10 @@ WSGI_APPLICATION = "demo.wsgi.application"
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
 DATABASES = {
-    # 'default': {
-    #     'ENGINE': 'django.db.backends.sqlite3',
-    #     'NAME': str(BASE_DIR / 'db.sqlite3'),
-    # },
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": environ["POSTGRES_DB"],
-        "USER": environ["POSTGRES_USER"],
-        "PASSWORD": environ["POSTGRES_PASSWORD"],
-        "HOST": "localhost",
-        "PORT": environ["POSTGRES_PORT"],
-        "ATOMIC_REQUESTS": False,
-    }
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": str(BASE_DIR / "db.sqlite3"),
+    },
 }
 
 AUTH_PASSWORD_VALIDATORS = [
