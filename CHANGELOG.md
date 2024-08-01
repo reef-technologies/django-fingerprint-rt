@@ -8,3 +8,19 @@ This project uses [*towncrier*](https://towncrier.readthedocs.io/) and the chang
 upcoming release can be found in [changelog.d](changelog.d).
 
 <!-- towncrier release notes start -->
+
+## [0.1.0](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.1.0) - 2024-08-01
+
+
+### Added
+
+- Add `cf-ipcountry` and `referer` to persistet headers
+
+
+### Fixed
+
+- Fix missing imports in fingerprint admin code.
+
+### Infrastructure
+
+- Rebase project to cookiecutter-rt-pkg template for improved CI&CD pipeline.
