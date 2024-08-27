@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.utils.timezone import now
+from freezegun import freeze_time
 from fingerprint.models import BrowserFingerprint, RequestFingerprint, UserSession
 
 
@@ -141,3 +142,33 @@ def test__user_session__auto_creation(db, client, user):
     assert UserSession.objects.count() == 1
     user_session = UserSession.objects.first()
     assert user_session.user == user
+
+
+def test__request_fingerprint__debounce(db, user_client, settings):
+    settings.FINGERPRINT_DEBOUNCE_PERIOD = timedelta(minutes=10)
+
+    assert not RequestFingerprint.objects.exists()
+
+    assert user_client.get("/request-test").status_code == 200
+    assert RequestFingerprint.objects.count() == 1
+
+    assert user_client.get("/request-test").status_code == 200
+    assert RequestFingerprint.objects.count() == 1
+
+    with freeze_time(now() + timedelta(minutes=11)):
+        assert user_client.get("/request-test").status_code == 200
+        assert RequestFingerprint.objects.count() == 2
+
+        assert user_client.get("/request-test").status_code == 200
+        assert RequestFingerprint.objects.count() == 2
+
+    with freeze_time(now() + timedelta(minutes=20)):
+        assert user_client.get("/request-test").status_code == 200
+        assert RequestFingerprint.objects.count() == 2
+
+    with freeze_time(now() + timedelta(minutes=21)):
+        assert user_client.get("/request-test").status_code == 200
+        assert RequestFingerprint.objects.count() == 3
+
+        assert user_client.get("/request-test").status_code == 200
+        assert RequestFingerprint.objects.count() == 3

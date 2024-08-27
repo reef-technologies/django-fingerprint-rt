@@ -51,6 +51,7 @@ test = [
     "pytest-django",
     "pytest-xdist",
     "django-debug-toolbar>=4.4.2",
+    "ipdb",
 ]
 lint = [
     "codespell[toml]",
@@ -63,6 +64,10 @@ lint = [
 ]
 release = [
     "towncrier",
+]
+dev = [
+    "nox>=2024.4.15",
+    "ipdb>=0.13.13",
 ]
 
 [tool.pytest.ini_options]

@@ -1,18 +1,24 @@
 from datetime import timedelta
 from functools import wraps
 from typing import Optional
+from logging import getLogger
 
+from django.conf import settings
 from django.core.exceptions import BadRequest, DisallowedRedirect
+from django.db import transaction
 from django.http.response import HttpResponse
 from django.utils.datastructures import MultiValueDictKeyError
 from django.utils.decorators import method_decorator
 from django.utils.encoding import iri_to_uri
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from ipware import get_client_ip
 
 from .models import BrowserFingerprint, RequestFingerprint, Url, UserSession
+
+log = getLogger(__name__)
 
 
 def get_or_create_session_key(request) -> str:
@@ -33,17 +39,23 @@ def fingerprint(fn):
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
-        RequestFingerprint.objects.create(
-            user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
-            url=Url.from_value(request.build_absolute_uri()[: max_length["url"]]),
-            ip=get_client_ip(request)[0],
-            user_agent=request.META.get("HTTP_USER_AGENT", "")[: max_length["user_agent"]],
-            accept=request.META.get("HTTP_ACCEPT", "")[: max_length["accept"]],
-            content_encoding=request.META.get("HTTP_CONTENT_ENCODING", "")[: max_length["content_encoding"]],
-            content_language=request.META.get("HTTP_CONTENT_LANGUAGE", "")[: max_length["content_language"]],
-            referer=request.META.get("HTTP_REFERER", "")[: max_length["referer"]],
-            cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
-        )
+        debounce_period = getattr(settings, "FINGERPRINT_DEBOUNCE_PERIOD", timedelta(seconds=10))
+        with transaction.atomic():
+            fingerprint, created = RequestFingerprint.objects.get_or_create(
+                user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+                url=Url.from_value(request.build_absolute_uri()[:max_length['url']]),
+                created__gte=now() - debounce_period,
+                defaults=dict(
+                    ip=get_client_ip(request)[0],
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:max_length['user_agent']],
+                    accept=request.META.get('HTTP_ACCEPT', '')[:max_length['accept']],
+                    content_encoding=request.META.get('HTTP_CONTENT_ENCODING', '')[:max_length['content_encoding']],
+                    content_language=request.META.get('HTTP_CONTENT_LANGUAGE', '')[:max_length['content_language']],
+                    referer=request.META.get("HTTP_REFERER", "")[: max_length["referer"]],
+                    cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
+                ),
+            )
+            log.debug("Fingerprint %s, created=%s", fingerprint, created)
         return fn(request, *args, **kwargs)
 
     return wrapper
