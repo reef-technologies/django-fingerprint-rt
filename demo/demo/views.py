@@ -1,6 +1,7 @@
 from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.views.generic import View
+
 from fingerprint.views import fingerprint, remember_user_session
 
 

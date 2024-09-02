@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from django.utils.timezone import now
 from freezegun import freeze_time
+
 from fingerprint.models import BrowserFingerprint, RequestFingerprint, UserSession
 
 
