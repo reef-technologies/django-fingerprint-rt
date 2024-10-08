@@ -40,10 +40,14 @@ def fingerprint(fn):
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
         debounce_period = getattr(settings, "FINGERPRINT_DEBOUNCE_PERIOD", timedelta(seconds=10))
+
+        url_value = request.build_absolute_uri()[: max_length["url"]]
+        url, _ = Url.objects.get_get_or_create(value=url_value)
+
         with transaction.atomic():
             fingerprint, created = RequestFingerprint.objects.get_or_create(
                 user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
-                url=Url.from_value(request.build_absolute_uri()[: max_length["url"]]),
+                url=url,
                 created__gte=now() - debounce_period,
                 defaults=dict(
                     ip=get_client_ip(request)[0],
@@ -127,10 +131,15 @@ class FingerprintView(TemplateView):
             raise BadRequest()
 
         session_key = get_or_create_session_key(request)
+
         url_max_length = Url._meta.get_field("value").max_length
-        BrowserFingerprint.objects.create(
-            user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
-            url=Url.from_value(request.META.get("HTTP_REFERER", "")[:url_max_length]),
-            visitor_id=visitor_id,
-        )
+        url_value = request.META.get("HTTP_REFERER", "")[:url_max_length]
+        url, _ = Url.objects.get_get_or_create(value=url_value)
+
+        with transaction.atomic():
+            BrowserFingerprint.objects.create(
+                user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+                url=url,
+                visitor_id=visitor_id,
+            )
         return HttpResponse(status=200)

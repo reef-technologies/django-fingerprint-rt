@@ -167,16 +167,21 @@ class MyView(ListView):
 
 # URL caching
 
-In order to reduce database load, there is a caching mechanism for URL model. It's enabled be default and will use Django's **default** cache backend. To use a custom cache backend, add this to your settings:
+In order to reduce database load, it is highly recommended to enable caching mechanism for `Url` model. This can be easily acieved using `django-cacheops`:
 
 ```python
-FINGERPRINT_CACHE = 'memcached'  # this has to be a valid key from settings.CACHES
-```
-
-To disable caching, set this to `None`:
-
-```python 
-FINGERPRINT_CACHE = None
+INSTALLED_APPS = [
+    # ...
+    'cacheops',
+]
+CACHEOPS_REDIS = "redis://localhost:6379/1"
+CACHEOPS = {
+    'fingerprint.url': {
+        'ops': 'get',
+        'local_get': True,
+        'timeout': int(timedelta(minutes=15).total_seconds()),
+    },
+}
 ```
 
 # Included licenses

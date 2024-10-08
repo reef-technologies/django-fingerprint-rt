@@ -32,6 +32,10 @@ dependencies = [
 "Source" = "https://github.com/reef-technologies/django-fingerprint-rt"
 "Issue Tracker" = "https://github.com/reef-technologies/django-fingerprint-rt/issues"
 
+[project.optional-dependencies]
+cache = [
+    "django-cacheops>=7.0.2",
+]
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"

@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.0/ref/settings/
 
 from __future__ import annotations
 
+from datetime import timedelta
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "cacheops",
     "demo",
     "fingerprint",
     "debug_toolbar",
@@ -88,6 +90,15 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": str(BASE_DIR / "db.sqlite3"),
+    },
+}
+
+CACHEOPS_REDIS = "redis://localhost:6379/1"
+CACHEOPS = {
+    'fingerprint.url': {
+        'ops': 'get',
+        'local_get': True,
+        'timeout': int(timedelta(minutes=15).total_seconds()),
     },
 }
 

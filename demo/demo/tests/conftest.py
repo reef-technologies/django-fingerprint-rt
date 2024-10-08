@@ -1,6 +1,6 @@
 import pytest
+from cacheops import invalidate_all
 from django.contrib.auth import get_user_model
-from django.core.cache import caches
 from django.test import Client
 
 
@@ -17,9 +17,12 @@ def user_client(client, user) -> Client:
     return client
 
 
-@pytest.fixture(autouse=True)
-def clear_cache(settings):
-    yield
+@pytest.fixture
+def nocache(settings) -> None:
+    settings.CACHEOPS_ENABLED = False
 
-    for cache in settings.CACHES.keys():
-        caches[cache].clear()
+
+@pytest.fixture(autouse=True)
+def clear_cache():
+    yield
+    invalidate_all()

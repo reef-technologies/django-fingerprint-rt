@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 import typing
 from collections import Counter
 from itertools import chain
@@ -10,7 +11,7 @@ from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
 from django.core.cache import caches
 from django.db import models, transaction
-from django.db.models import Count
+from django.db.models import Count, Model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -53,27 +54,30 @@ def connect_user_to_session(sender, instance, created, **kwargs):
         )
 
 
+class UrlQuerySet(models.QuerySet):
+
+    def get_get_or_create(self, defaults: dict = {}, **query) -> tuple[Model, bool]:
+        """
+        Try to retrieve an object using simple `get()` query, and fallback to `get_or_create()`
+        if the object is not found.
+
+        This is required for django-cacheops to be able to cache the `get()` query, since it
+        cannot cache `get_or_create` queries.
+        """
+        with suppress(self.model.DoesNotExist):
+            return self.get(**query), False
+
+        with transaction.atomic():
+            return self.get_or_create(**query, defaults=defaults)
+
+
 class Url(models.Model):
     value: models.CharField = models.CharField(max_length=255, unique=True)
 
+    objects = UrlQuerySet.as_manager()
+
     def __str__(self) -> str:
         return self.value
-
-    @classmethod
-    def from_value(cls, value: str) -> Url:
-        cache_name = getattr(settings, "FINGERPRINT_CACHE", "default")
-        if cache_name is None:
-            return cls.objects.get_or_create(value=value)[0]
-
-        cache = caches[cache_name]
-        cache_key = f"fp_url_{value}"
-
-        if url := cache.get(cache_key):
-            return url
-
-        url = cls.objects.get_or_create(value=value)[0]
-        cache.set(cache_key, url)
-        return url
 
 
 class AbstractFingerprint(models.Model):
