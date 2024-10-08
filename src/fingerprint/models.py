@@ -10,7 +10,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
 from django.core.cache import caches
-from django.db import models, transaction
+from django.db import IntegrityError, models, transaction
 from django.db.models import Count, Model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -68,7 +68,10 @@ class UrlQuerySet(models.QuerySet):
             return self.get(**query), False
 
         with transaction.atomic():
-            return self.get_or_create(**query, defaults=defaults)
+            try:
+                return self.create(**{**query, **defaults}), True
+            except IntegrityError:
+                return self.get(**query), False
 
 
 class Url(models.Model):
