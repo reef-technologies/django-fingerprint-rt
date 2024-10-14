@@ -173,3 +173,19 @@ def test__request_fingerprint__debounce(db, user_client, settings):
 
         assert user_client.get("/request-test").status_code == 200
         assert RequestFingerprint.objects.count() == 3
+
+
+def test__request_fingerprint__multiple_already_exist(client, db):
+    response = client.get("/request-test")
+    assert response.status_code == 200
+
+    fingerprint = RequestFingerprint.objects.get()
+
+    # create a copy
+    fingerprint.id = None
+    fingerprint.save()
+
+    assert RequestFingerprint.objects.count() == 2
+
+    response = client.get("/request-test")
+    assert response.status_code == 200

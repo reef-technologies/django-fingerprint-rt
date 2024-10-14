@@ -1,3 +1,4 @@
+from contextlib import suppress
 from datetime import timedelta
 from functools import wraps
 from logging import getLogger
@@ -44,7 +45,7 @@ def fingerprint(fn):
         url_value = request.build_absolute_uri()[: max_length["url"]]
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
-        with transaction.atomic():
+        with suppress(RequestFingerprint.MultipleObjectsReturned), transaction.atomic():
             fingerprint, created = RequestFingerprint.objects.get_or_create(
                 user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
                 url=url,
