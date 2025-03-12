@@ -95,10 +95,10 @@ DATABASES = {
 
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS = {
-    'fingerprint.url': {
-        'ops': 'get',
-        'local_get': True,
-        'timeout': int(timedelta(minutes=15).total_seconds()),
+    "fingerprint.url": {
+        "ops": "get",
+        "local_get": True,
+        "timeout": int(timedelta(minutes=15).total_seconds()),
     },
 }
 

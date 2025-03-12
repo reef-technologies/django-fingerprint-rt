@@ -1,4 +1,5 @@
 from collections import Counter
+
 from fingerprint.models import RequestFingerprint
 
 
