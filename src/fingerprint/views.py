@@ -21,6 +21,14 @@ from .models import BrowserFingerprint, RequestFingerprint, Url, UserSession
 
 log = getLogger(__name__)
 
+UTM_PARAMS = (
+    "utm_source",
+    "utm_campaign",
+    "utm_term",
+    "utm_medium",
+    "utm_content",
+)
+
 
 def get_or_create_session_key(request) -> str:
     if not request.session or not request.session.session_key:
@@ -45,9 +53,11 @@ def fingerprint(fn):
         url_value = request.build_absolute_uri()[: max_length["url"]]
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
+        utm_params = {param: request.GET.get(param, "") for param in UTM_PARAMS}
+
         with suppress(RequestFingerprint.MultipleObjectsReturned), transaction.atomic():
             fingerprint, created = RequestFingerprint.objects.get_or_create(
-                user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+                user_session=UserSession.objects.get_or_create(session_key=session_key, defaults=utm_params)[0],
                 url=url,
                 created__gte=now() - debounce_period,
                 defaults=dict(

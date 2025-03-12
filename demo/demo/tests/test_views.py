@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import urlencode
 
 from django.utils.timezone import now
 from freezegun import freeze_time
@@ -81,6 +82,38 @@ def test__request__fingerprint__header_fields_overflow(client, db):
     assert fingerprint.content_language == headers["HTTP_CONTENT_LANGUAGE"][:255]
     assert fingerprint.referer == headers["HTTP_REFERER"][:2047]
     assert fingerprint.cf_ipcountry == headers["HTTP_CF_IPCOUNTRY"][:16]
+
+
+def test__request__user_session__utm_fields(client, db):
+    utm_params = {
+        "utm_source": "test_source",
+        "utm_campaign": "test_utm_campaign",
+        "utm_term": "test_term",
+        "utm_medium": "test_medium",
+        "utm_content": "test_content",
+    }
+
+    query = urlencode(utm_params)
+
+    response = client.get(f"/request-test?{query}")
+    assert response.status_code == 200
+
+    user_session = UserSession.objects.get()
+
+    for name, val in utm_params.items():
+        assert getattr(user_session, name) == val
+
+
+def test__request__user_session__utm_fields__no_overwrite(client, db):
+    old_utm_source = "old_utm_source"
+    new_utm_source = "new_utm_source"
+
+    client.get(f"/request-test?utm_source={old_utm_source}")
+    client.get(f"/request-test?utm_source={new_utm_source}")
+
+    user_session = UserSession.objects.get()
+
+    assert user_session.utm_source == old_utm_source
 
 
 def test__request__user_session__user_capture(user, user_client, db):
