@@ -29,6 +29,8 @@ class UserSession(models.Model):
     session_key: models.CharField = models.CharField(max_length=40)
     created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
+    referer: models.CharField = models.CharField(max_length=2047, blank=True)
+
     # Urchin Tracking Module (UTM) parameters
     utm_source: models.CharField = models.CharField(max_length=255, blank=True)
     utm_medium: models.CharField = models.CharField(max_length=255, blank=True)
