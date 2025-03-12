@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from contextlib import suppress
 import typing
 from collections import Counter
+from contextlib import suppress
 from itertools import chain
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
-from django.core.cache import caches
 from django.db import IntegrityError, models, transaction
 from django.db.models import Count, Model
 from django.db.models.signals import post_save
@@ -29,6 +28,13 @@ class UserSession(models.Model):
     )
     session_key: models.CharField = models.CharField(max_length=40)
     created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
+
+    # Urchin Tracking Module (UTM) parameters
+    utm_source: models.CharField = models.CharField(max_length=255, blank=True)
+    utm_medium: models.CharField = models.CharField(max_length=255, blank=True)
+    utm_campaign: models.CharField = models.CharField(max_length=255, blank=True)
+    utm_content: models.CharField = models.CharField(max_length=255, blank=True)
+    utm_term: models.CharField = models.CharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.session_key
@@ -55,7 +61,6 @@ def connect_user_to_session(sender, instance, created, **kwargs):
 
 
 class UrlQuerySet(models.QuerySet):
-
     def get_get_or_create(self, defaults: dict = {}, **query) -> tuple[Model, bool]:
         """
         Try to retrieve an object using simple `get()` query, and fallback to `get_or_create()`
