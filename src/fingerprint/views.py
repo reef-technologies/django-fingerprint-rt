@@ -53,11 +53,14 @@ def fingerprint(fn):
         url_value = request.build_absolute_uri()[: max_length["url"]]
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
-        utm_params = {param: request.GET.get(param, "") for param in UTM_PARAMS}
+        referer = request.META.get("HTTP_REFERER", "")[: max_length["referer"]]
+
+        session_defaults = {param: request.GET.get(param, "") for param in UTM_PARAMS}
+        session_defaults["referer"] = referer
 
         with suppress(RequestFingerprint.MultipleObjectsReturned), transaction.atomic():
             fingerprint, created = RequestFingerprint.objects.get_or_create(
-                user_session=UserSession.objects.get_or_create(session_key=session_key, defaults=utm_params)[0],
+                user_session=UserSession.objects.get_or_create(session_key=session_key, defaults=session_defaults)[0],
                 url=url,
                 created__gte=now() - debounce_period,
                 defaults=dict(
@@ -66,7 +69,7 @@ def fingerprint(fn):
                     accept=request.META.get("HTTP_ACCEPT", "")[: max_length["accept"]],
                     content_encoding=request.META.get("HTTP_CONTENT_ENCODING", "")[: max_length["content_encoding"]],
                     content_language=request.META.get("HTTP_CONTENT_LANGUAGE", "")[: max_length["content_language"]],
-                    referer=request.META.get("HTTP_REFERER", "")[: max_length["referer"]],
+                    referer=referer,
                     cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
                 ),
             )

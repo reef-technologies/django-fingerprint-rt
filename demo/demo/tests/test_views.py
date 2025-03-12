@@ -116,6 +116,25 @@ def test__request__user_session__utm_fields__no_overwrite(client, db):
     assert user_session.utm_source == old_utm_source
 
 
+def test__request__user_session__referer(client, db):
+    referer = "http://localhost/somepath"
+
+    client.get("/request-test", HTTP_REFERER=referer)
+
+    user_session = UserSession.objects.get()
+    assert user_session.referer == referer
+
+
+def test__request__user_session__referer__no_overwrite(client, db):
+    referer = "http://localhost/somepath"
+
+    client.get("/request-test", HTTP_REFERER=referer)
+    client.get("/request-test", HTTP_REFERER="http://new.com/")
+
+    user_session = UserSession.objects.get()
+    assert user_session.referer == referer
+
+
 def test__request__user_session__user_capture(user, user_client, db):
     UserSession.objects.all().delete()
 
