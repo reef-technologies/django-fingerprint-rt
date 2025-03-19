@@ -60,7 +60,7 @@ jobs:
         run: pdm build
 
       - name: Sign distribution
-        uses: sigstore/gh-action-sigstore-python@v2.1.1
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
         with:
           inputs: >-
             dist/*.tar.gz
@@ -80,7 +80,7 @@ jobs:
             dist/*.sigstore
 
       - name: Remove signature files as pypa/gh-action-pypi-publish does not support them
-        run: rm -f dist/*.sigstore
+        run: rm -f dist/*.sigstore*
 
       - name: Publish distribution 📦 to TestPyPI
         if: ${{ steps.get-version.outputs.draft == 'true' }}
