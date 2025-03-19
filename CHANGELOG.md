@@ -9,6 +9,14 @@ upcoming release can be found in [changelog.d](changelog.d).
 
 <!-- towncrier release notes start -->
 
+## [0.2.0](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.2.0) - 2025-03-19
+
+### Added
+
+- Capture and save UTM params in user session.
+- Save referer header to UserSession in `fingerprint` decorator.
+
+
 ## [0.1.0](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.1.0) - 2024-08-01
 
 
