@@ -149,7 +149,7 @@ class NumFingerprintsListFilter(admin.SimpleListFilter):
     query_parameter: str
 
     def lookups(self, request, model_admin):
-        return [(i, f"{min_}-{max_-1}") for i, (min_, max_) in enumerate(self.groups)]
+        return [(i, f"{min_}-{max_ - 1}") for i, (min_, max_) in enumerate(self.groups)]
 
     def queryset(self, request, queryset):
         if not (value := self.value()):

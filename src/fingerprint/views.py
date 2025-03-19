@@ -21,6 +21,14 @@ from .models import BrowserFingerprint, RequestFingerprint, Url, UserSession
 
 log = getLogger(__name__)
 
+UTM_PARAMS = (
+    "utm_source",
+    "utm_campaign",
+    "utm_term",
+    "utm_medium",
+    "utm_content",
+)
+
 
 def get_or_create_session_key(request) -> str:
     if not request.session or not request.session.session_key:
@@ -45,9 +53,14 @@ def fingerprint(fn):
         url_value = request.build_absolute_uri()[: max_length["url"]]
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
+        referer = request.META.get("HTTP_REFERER", "")[: max_length["referer"]]
+
+        session_defaults = {param: request.GET.get(param, "") for param in UTM_PARAMS}
+        session_defaults["referer"] = referer
+
         with suppress(RequestFingerprint.MultipleObjectsReturned), transaction.atomic():
             fingerprint, created = RequestFingerprint.objects.get_or_create(
-                user_session=UserSession.objects.get_or_create(session_key=session_key)[0],
+                user_session=UserSession.objects.get_or_create(session_key=session_key, defaults=session_defaults)[0],
                 url=url,
                 created__gte=now() - debounce_period,
                 defaults=dict(
@@ -56,7 +69,7 @@ def fingerprint(fn):
                     accept=request.META.get("HTTP_ACCEPT", "")[: max_length["accept"]],
                     content_encoding=request.META.get("HTTP_CONTENT_ENCODING", "")[: max_length["content_encoding"]],
                     content_language=request.META.get("HTTP_CONTENT_LANGUAGE", "")[: max_length["content_language"]],
-                    referer=request.META.get("HTTP_REFERER", "")[: max_length["referer"]],
+                    referer=referer,
                     cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
                 ),
             )
