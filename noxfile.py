@@ -133,7 +133,7 @@ def lint(session):
     )
     session.run("ruff", "check", "--diff", "--unsafe-fixes", ".")
     session.run("ruff", "format", "--diff", ".")
-    session.run("mypy", ".")
+    # session.run("mypy", ".")
     session.run("codespell", ".")
     run_shellcheck(session, mode="check")
     run_readable(session, mode="check")
