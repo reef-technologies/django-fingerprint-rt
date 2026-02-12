@@ -3,18 +3,20 @@ from __future__ import annotations
 import typing
 from collections import Counter
 from contextlib import suppress
-from itertools import chain
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AbstractBaseUser
 from django.contrib.sessions.models import Session
 from django.db import IntegrityError, models, transaction
 from django.db.models import Count, Model
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+from .fields import TruncatedCharField
+
 if typing.TYPE_CHECKING:
+    from django.contrib.auth.models import AbstractBaseUser
+    from django.http import HttpRequest
     from django.shortcuts import SupportsGetAbsoluteUrl
 
 
@@ -29,19 +31,19 @@ class UserSession(models.Model):
     session_key: models.CharField = models.CharField(max_length=40)
     created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
-    referer: models.CharField = models.CharField(max_length=2047, blank=True)
+    referer: models.CharField = TruncatedCharField(max_length=2047, blank=True)
 
     # Urchin Tracking Module (UTM) parameters
-    utm_source: models.CharField = models.CharField(max_length=255, blank=True)
-    utm_medium: models.CharField = models.CharField(max_length=255, blank=True)
-    utm_campaign: models.CharField = models.CharField(max_length=255, blank=True)
-    utm_content: models.CharField = models.CharField(max_length=255, blank=True)
-    utm_term: models.CharField = models.CharField(max_length=255, blank=True)
+    utm_source: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    utm_medium: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    utm_campaign: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    utm_content: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    utm_term: models.CharField = TruncatedCharField(max_length=255, blank=True)
 
     def __str__(self):
         return self.session_key
 
-    class Meta:  # noqa: D106
+    class Meta:
         constraints = [
             models.UniqueConstraint(fields=["session_key", "user"], name="unique_user_session"),
         ]
@@ -82,7 +84,7 @@ class UrlQuerySet(models.QuerySet):
 
 
 class Url(models.Model):
-    value: models.CharField = models.CharField(max_length=255, unique=True)
+    value = TruncatedCharField(max_length=2048, unique=True)
 
     objects = UrlQuerySet.as_manager()
 
@@ -97,7 +99,7 @@ class AbstractFingerprint(models.Model):
     url: models.ForeignKey = models.ForeignKey(Url, on_delete=models.CASCADE, related_name="%(model_name)ss")
     created: models.DateTimeField = models.DateTimeField(auto_now_add=True)
 
-    class Meta:  # noqa: D106
+    class Meta:
         abstract = True
         indexes = [
             models.Index(fields=["user_session", "-created"]),
@@ -110,31 +112,30 @@ class AbstractFingerprint(models.Model):
 
     @classmethod
     def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
-        with transaction.atomic():
-            existing_urls = Url.objects.filter(value__in=urls)
-            non_existing_urls = set(urls) - {url.value for url in existing_urls}
-            new_urls = (
-                Url.objects.bulk_create(Url(value=value) for value in non_existing_urls) if non_existing_urls else []
-            )
-
-        id_to_url = {url_obj.pk: url_obj for url_obj in chain(existing_urls, new_urls)}
+        existing_urls = dict(Url.objects.filter(value__in=urls).values_list("id", "value"))
 
         # this is SELECT COUNT(*) GROUP BY in django:
         ids_and_hits = (
-            cls.objects.filter(url__in=id_to_url.keys())
+            cls.objects.filter(url__in=existing_urls)
             .values("url")
             .annotate(hits=Count("user_session", distinct=True))
             .order_by("url")
             .values_list("url", "hits")
         )
 
-        return Counter({id_to_url[id_].value: hits for id_, hits in ids_and_hits})
+        counter = Counter({existing_urls[id_]: hits for id_, hits in ids_and_hits})
+
+        max_length = Url._meta.get_field("value").max_length
+        counter.update({url: counter[url[:max_length]] for url in urls if len(url) > max_length})
+        return counter
 
     @classmethod
-    def get_count_for_objects(cls, request, objects: list[SupportsGetAbsoluteUrl]) -> Counter[SupportsGetAbsoluteUrl]:
-        url_to_object = {request.build_absolute_uri(object.get_absolute_url()): object for object in objects}
-        counter = RequestFingerprint.get_count_for_urls(sorted(url_to_object.keys()))
-        return Counter({object: counter[url] for url, object in url_to_object.items()})
+    def get_count_for_objects(
+        cls, request: HttpRequest, objects: list[SupportsGetAbsoluteUrl]
+    ) -> Counter[SupportsGetAbsoluteUrl]:
+        url_to_object = {request.build_absolute_uri(obj.get_absolute_url()): obj for obj in objects}
+        counter = cls.get_count_for_urls(set(url_to_object.keys()))
+        return Counter({obj: counter[url] for url, obj in url_to_object.items()})
 
 
 class BrowserFingerprint(AbstractFingerprint):
@@ -155,12 +156,12 @@ class BrowserFingerprint(AbstractFingerprint):
 
 class RequestFingerprint(AbstractFingerprint):
     ip: models.GenericIPAddressField = models.GenericIPAddressField(blank=True, null=True)
-    user_agent: models.CharField = models.CharField(max_length=255, blank=True)
-    accept: models.CharField = models.CharField(max_length=255, blank=True)
-    content_encoding: models.CharField = models.CharField(max_length=255, blank=True)
-    content_language: models.CharField = models.CharField(max_length=255, blank=True)
-    referer: models.CharField = models.CharField(max_length=2047, blank=True)
-    cf_ipcountry: models.CharField = models.CharField(max_length=16, blank=True)
+    user_agent: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    accept: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    content_encoding: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    content_language: models.CharField = TruncatedCharField(max_length=255, blank=True)
+    referer: models.CharField = TruncatedCharField(max_length=2047, blank=True)
+    cf_ipcountry: models.CharField = TruncatedCharField(max_length=16, blank=True)
 
     def __str__(self):
         return f"{self.ip} {self.user_agent}"

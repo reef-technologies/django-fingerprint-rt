@@ -224,22 +224,22 @@ Internal packages, i.e. prefixed by `fingerprint._` do not share these guarantee
 
 
 Pre-requisites:
-- [pdm](https://pdm.fming.dev/)
-- [nox](https://nox.thea.codes/en/stable/)
+- [uv](https://docs.astral.sh/uv/)
+- [nox](https://nox.thea.codes/en/stable/) - `uv tool install nox`
 - [docker](https://www.docker.com/) and [docker compose plugin](https://docs.docker.com/compose/)
 
 
-Ideally, you should run `nox -t format lint` before every commit to ensure that the code is properly formatted and linted.
+Ideally, you should run `uvx nox -t format lint` before every commit to ensure that the code is properly formatted and linted.
 Before submitting a PR, make sure that tests pass as well, you can do so using:
 ```
-nox -t check # equivalent to `nox -t format lint test`
+uvx nox -t check # equivalent to `uvx nox -t format lint test`
 ```
 
 If you wish to install dependencies into `.venv` so your IDE can pick them up, you can do so using:
 ```
-pdm install --dev
+uv sync --all-groups
 ```
 
 ### Release process
 
-Run `nox -s make_release -- X.Y.Z` where `X.Y.Z` is the version you're releasing and follow the printed instructions.
+Run `uvx nox -s make_release -- X.Y.Z` where `X.Y.Z` is the version you're releasing and follow the printed instructions.

@@ -11,18 +11,17 @@ from pathlib import Path
 
 import nox
 
-os.environ["PDM_IGNORE_SAVED_PYTHON"] = "1"
-
 CI = os.environ.get("CI") is not None
 
 ROOT = Path(".nox/tmp/fingerprint")
+PYPROJECT = nox.project.load_toml("pyproject.toml")
 MAIN_BRANCH_NAME = "master"
-PYTHON_VERSIONS = ["3.9", "3.11", "3.12"]
+PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
 PYTHON_DEFAULT_VERSION = PYTHON_VERSIONS[-1]
-DJANGO_VERSIONS = ["3.2", "4.2"]
+DJANGO_VERSIONS = ["3.2", "4.2", "5.2"]
 DEMO_APP_DIR = ROOT / "demo"
 
-nox.options.default_venv_backend = "venv"
+nox.options.default_venv_backend = "uv"
 nox.options.stop_on_first_error = True
 nox.options.reuse_existing_virtualenvs = not CI
 
@@ -30,21 +29,6 @@ nox.options.reuse_existing_virtualenvs = not CI
 if CI:
     # In CI, use Python interpreter provided by GitHub Actions
     PYTHON_VERSIONS = [sys.executable]
-
-
-def install(session: nox.Session, *groups, dev: bool = True, editable: bool = False, no_self=False, no_default=False):
-    other_args = []
-    if not dev:
-        other_args.append("--prod")
-    if not editable:
-        other_args.append("--no-editable")
-    if no_self:
-        other_args.append("--no-self")
-    if no_default:
-        other_args.append("--no-default")
-    for group in groups:
-        other_args.extend(["--group", group])
-    session.run("pdm", "install", "--check", *other_args, external=True)
 
 
 @functools.lru_cache
@@ -132,7 +116,7 @@ def run_shellcheck(session, mode="check"):
 @nox.session(name="format", python=PYTHON_DEFAULT_VERSION, tags=["format", "check"])
 def format_(session):
     """Lint the code and apply fixes in-place whenever possible."""
-    install(session, "lint", no_self=True, no_default=True)
+    session.install(*PYPROJECT["dependency-groups"]["lint"])
     session.run("ruff", "check", "--fix", ".")
     run_shellcheck(session, mode="fmt")
     run_readable(session, mode="fmt")
@@ -143,7 +127,10 @@ def format_(session):
 def lint(session):
     """Run linters in readonly mode."""
     # "test" group is required for mypy to work against test files
-    install(session, "lint", "test")
+    session.install(
+        *PYPROJECT["dependency-groups"]["lint"],
+        *PYPROJECT["dependency-groups"]["test"],
+    )
     session.run("ruff", "check", "--diff", "--unsafe-fixes", ".")
     session.run("ruff", "format", "--diff", ".")
     session.run("mypy", ".")
@@ -155,14 +142,13 @@ def lint(session):
 @nox.session(python=PYTHON_VERSIONS, tags=["test", "check"])
 @nox.parametrize("django", DJANGO_VERSIONS)
 def test(session, django: str):
-    install(session, "test", "cache")
-    session.run("pip", "install", f"django~={django}.0")
+    session.install(*PYPROJECT["dependency-groups"]["test"], ".[cache]", f"django~={django}.0")
     session.run("pytest", "-vv", *session.posargs)
 
 
 @nox.session(python=PYTHON_DEFAULT_VERSION)
 def make_release(session):
-    install(session, "release", no_self=True, no_default=True)
+    session.install(*PYPROJECT["dependency-groups"]["release"])
     parser = argparse.ArgumentParser()
 
     def version(value):

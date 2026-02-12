@@ -39,21 +39,15 @@ def get_or_create_session_key(request) -> str:
 def fingerprint(fn):
     """A decorator which creates a backend Fingerprint object for the current request."""
 
-    max_length = {
-        field_name: RequestFingerprint._meta.get_field(field_name).max_length
-        for field_name in ("user_agent", "accept", "content_encoding", "content_language", "referer", "cf_ipcountry")
-    }
-    max_length["url"] = Url._meta.get_field("value").max_length
-
     @wraps(fn)
     def wrapper(request, *args, **kwargs):
         session_key = get_or_create_session_key(request)
         debounce_period = getattr(settings, "FINGERPRINT_DEBOUNCE_PERIOD", timedelta(seconds=10))
 
-        url_value = request.build_absolute_uri()[: max_length["url"]]
+        url_value = request.build_absolute_uri()
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
-        referer = request.META.get("HTTP_REFERER", "")[: max_length["referer"]]
+        referer = request.META.get("HTTP_REFERER", "")
 
         session_defaults = {param: request.GET.get(param, "") for param in UTM_PARAMS}
         session_defaults["referer"] = referer
@@ -65,12 +59,12 @@ def fingerprint(fn):
                 created__gte=now() - debounce_period,
                 defaults=dict(
                     ip=get_client_ip(request)[0],
-                    user_agent=request.META.get("HTTP_USER_AGENT", "")[: max_length["user_agent"]],
-                    accept=request.META.get("HTTP_ACCEPT", "")[: max_length["accept"]],
-                    content_encoding=request.META.get("HTTP_CONTENT_ENCODING", "")[: max_length["content_encoding"]],
-                    content_language=request.META.get("HTTP_CONTENT_LANGUAGE", "")[: max_length["content_language"]],
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    accept=request.META.get("HTTP_ACCEPT", ""),
+                    content_encoding=request.META.get("HTTP_CONTENT_ENCODING", ""),
+                    content_language=request.META.get("HTTP_CONTENT_LANGUAGE", ""),
                     referer=referer,
-                    cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", "")[: max_length["cf_ipcountry"]],
+                    cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", ""),
                 ),
             )
             log.debug("Fingerprint %s, created=%s", fingerprint, created)
@@ -146,8 +140,7 @@ class FingerprintView(TemplateView):
 
         session_key = get_or_create_session_key(request)
 
-        url_max_length = Url._meta.get_field("value").max_length
-        url_value = request.META.get("HTTP_REFERER", "")[:url_max_length]
+        url_value = request.META.get("HTTP_REFERER", "")
         url, _ = Url.objects.get_get_or_create(value=url_value)
 
         with transaction.atomic():

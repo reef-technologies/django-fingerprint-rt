@@ -55,5 +55,5 @@ def test__models__get_count_for_urls__num_queries(db, client, django_assert_num_
     client.get(url1)
     client.get(url2)
 
-    with django_assert_num_queries(4):
+    with django_assert_num_queries(2):
         RequestFingerprint.get_count_for_urls([absolute_url1, absolute_url2])

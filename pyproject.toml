@@ -40,13 +40,7 @@ cache = [
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-[tool.pdm]
-distribution = true
-
-[tool.pdm.version]
-source = "scm"
-
-[tool.pdm.dev-dependencies]
+[dependency-groups]
 test = [
     "freezegun",
     "pytest",
@@ -54,7 +48,7 @@ test = [
     "pytest-asyncio",
     "pytest-django",
     "pytest-xdist",
-    "django-debug-toolbar>=4.4.2",
+    "django-debug-toolbar",
     "ipdb",
 ]
 lint = [
