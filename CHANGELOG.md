@@ -9,6 +9,13 @@ upcoming release can be found in [changelog.d](changelog.d).
 
 <!-- towncrier release notes start -->
 
+## [0.2.1](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.2.1) - 2026-02-13
+
+### Fixed
+
+- Fix: reduce number of requests in `get_count_for_urls`
+- Fix long values handing
+
 ## [0.2.0](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.2.0) - 2025-03-19
 
 ### Added

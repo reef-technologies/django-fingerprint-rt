@@ -39,6 +39,8 @@ cache = [
 [build-system]
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
+[tool.pdm.version]
+source = "scm"
 
 [dependency-groups]
 test = [
