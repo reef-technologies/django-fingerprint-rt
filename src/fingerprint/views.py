@@ -2,7 +2,6 @@ from contextlib import suppress
 from datetime import timedelta
 from functools import wraps
 from logging import getLogger
-from typing import Optional
 
 from django.conf import settings
 from django.core.exceptions import BadRequest, DisallowedRedirect
@@ -17,7 +16,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import TemplateView
 from ipware import get_client_ip
 
-from .models import BrowserFingerprint, RequestFingerprint, Url, UserSession
+from .models import BrowserFingerprint, RequestFingerprint, RequestHitCount, Url, UserSession
 
 log = getLogger(__name__)
 
@@ -67,6 +66,8 @@ def fingerprint(fn):
                     cf_ipcountry=request.META.get("HTTP_CF_IPCOUNTRY", ""),
                 ),
             )
+            if created and fingerprint.is_unique():
+                RequestHitCount.inc(fingerprint.url)
             log.debug("Fingerprint %s, created=%s", fingerprint, created)
         return fn(request, *args, **kwargs)
 
@@ -120,7 +121,7 @@ class FingerprintView(TemplateView):
 
     template_name = "fingerprint/fingerprint.html"
     redirect_in = timedelta(seconds=3)
-    allowed_hosts: Optional[set] = None
+    allowed_hosts: set | None = None
 
     def get_context_data(self, **kwargs):
         redirect_url = iri_to_uri(self.request.GET.get("next", "/"))

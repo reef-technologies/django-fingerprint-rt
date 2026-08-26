@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.db import IntegrityError, models, transaction
-from django.db.models import Count, Model
+from django.db.models import Count, Exists, F, Model, OuterRef
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -92,6 +92,54 @@ class Url(models.Model):
         return self.value
 
 
+class RequestHitCount(models.Model):
+    url = models.OneToOneField(Url, on_delete=models.CASCADE, related_name="request_hit_count")
+    hits = models.PositiveIntegerField(default=0)
+
+    def __str__(self) -> str:
+        return f"{self.url_id}: {self.hits}"
+
+    @classmethod
+    def inc(cls, url: Url) -> None:
+        updated = cls.objects.filter(url=url).update(hits=F("hits") + 1)
+        if not updated:
+            try:
+                cls.objects.create(url=url, hits=1)
+            except IntegrityError:
+                cls.objects.filter(url=url).update(hits=F("hits") + 1)
+
+    @classmethod
+    def set(cls, url: Url, hits: int) -> None:
+        cls.objects.update_or_create(url=url, defaults={"hits": hits})
+
+    @classmethod
+    def rebuild_hit_counts(cls, chunk_size: int = 1000) -> None:
+        last_id = 0
+        while url_ids := list(
+            RequestFingerprint.objects.filter(url_id__gt=last_id)
+            .values_list("url_id", flat=True)
+            .distinct()
+            .order_by("url_id")[:chunk_size]
+        ):
+            last_id = url_ids[-1]
+            rows = (
+                RequestFingerprint.objects.filter(url_id__in=url_ids)
+                .values("url")
+                .annotate(hits=Count("user_session", distinct=True))
+                .values_list("url", "hits")
+            )
+            cls.objects.bulk_create(
+                [cls(url_id=url_id, hits=hits) for url_id, hits in rows],
+                update_conflicts=True,
+                unique_fields=["url"],
+                update_fields=["hits"],
+            )
+
+        stale = cls.objects.filter(~Exists(RequestFingerprint.objects.filter(url_id=OuterRef("url_id"))))
+        while pks := list(stale.order_by("pk").values_list("pk", flat=True)[:chunk_size]):
+            cls.objects.filter(pk__in=pks).delete()
+
+
 class AbstractFingerprint(models.Model):
     user_session: models.ForeignKey = models.ForeignKey(
         UserSession, on_delete=models.CASCADE, related_name="%(model_name)ss"
@@ -109,33 +157,6 @@ class AbstractFingerprint(models.Model):
     @property
     def user(self) -> AbstractBaseUser | None:
         return self.user_session.user
-
-    @classmethod
-    def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
-        existing_urls = dict(Url.objects.filter(value__in=urls).values_list("id", "value"))
-
-        # this is SELECT COUNT(*) GROUP BY in django:
-        ids_and_hits = (
-            cls.objects.filter(url__in=existing_urls)
-            .values("url")
-            .annotate(hits=Count("user_session", distinct=True))
-            .order_by("url")
-            .values_list("url", "hits")
-        )
-
-        counter = Counter({existing_urls[id_]: hits for id_, hits in ids_and_hits})
-
-        max_length = Url._meta.get_field("value").max_length
-        counter.update({url: counter[url[:max_length]] for url in urls if len(url) > max_length})
-        return counter
-
-    @classmethod
-    def get_count_for_objects(
-        cls, request: HttpRequest, objects: list[SupportsGetAbsoluteUrl]
-    ) -> Counter[SupportsGetAbsoluteUrl]:
-        url_to_object = {request.build_absolute_uri(obj.get_absolute_url()): obj for obj in objects}
-        counter = cls.get_count_for_urls(set(url_to_object.keys()))
-        return Counter({obj: counter[url] for url, obj in url_to_object.items()})
 
 
 class BrowserFingerprint(AbstractFingerprint):
@@ -175,6 +196,33 @@ class RequestFingerprint(AbstractFingerprint):
 
     def get_value_display(self) -> str:
         return self.user_agent[:24] + "..."
+
+    def is_unique(self) -> bool:
+        return (
+            not self.__class__.objects.filter(
+                url_id=self.url_id,
+                user_session_id=self.user_session_id,
+            )
+            .exclude(pk=self.pk)
+            .exists()
+        )
+
+    @classmethod
+    def get_count_for_urls(cls, urls: list[str]) -> Counter[str]:
+        existing_urls = dict(Url.objects.filter(value__in=urls).values_list("id", "value"))
+        ids_and_hits = RequestHitCount.objects.filter(url_id__in=existing_urls).values_list("url_id", "hits")
+        counter = Counter({existing_urls[id_]: hits for id_, hits in ids_and_hits})
+        max_length = Url._meta.get_field("value").max_length
+        counter.update({url: counter[url[:max_length]] for url in urls if len(url) > max_length})
+        return counter
+
+    @classmethod
+    def get_count_for_objects(
+        cls, request: HttpRequest, objects: list[SupportsGetAbsoluteUrl]
+    ) -> Counter[SupportsGetAbsoluteUrl]:
+        url_to_object = {request.build_absolute_uri(obj.get_absolute_url()): obj for obj in objects}
+        counter = cls.get_count_for_urls(set(url_to_object.keys()))
+        return Counter({obj: counter[url] for url, obj in url_to_object.items()})
 
 
 class UserFingerprint(get_user_model()):  # type: ignore

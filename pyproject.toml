@@ -1,6 +1,6 @@
 [project]
 name = "django-fingerprint-rt"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 description = "Users fingerprinting for your django app"
 keywords = []
 license = {text = "MIT"}
@@ -12,20 +12,22 @@ authors = [
 classifiers = [
     "Framework :: Django",
     "Framework :: Django :: 4.2",
+    "Framework :: Django :: 5.2",
     "Operating System :: OS Independent",
     "Topic :: Software Development :: Libraries",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dynamic = [
     "version",
 ]
 dependencies = [
     "django-ipware~=6.0.4",
-    "django>=3.1",
+    "django>=4.2",
 ]
 
 [project.urls]
@@ -82,11 +84,11 @@ line-length = 120
 select = [
     "D",
     "E", "F", "I", "UP",
-    "TCH005",
+    "TC005",
 ]
 ignore = [
     "D100", "D105", "D107", "D200", "D202", "D203", "D205", "D212", "D400", "D401", "D415",
-    "D101", "D102", "D103", "D104", # TODO remove once we have docstring for all public methods
+    "D101", "D102", "D103", "D104", "D106",
 ]
 
 [tool.ruff.lint.per-file-ignores]

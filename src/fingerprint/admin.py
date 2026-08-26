@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from datetime import timedelta
 from functools import wraps
 from itertools import chain, islice
-from typing import Callable
 
 from django.contrib import admin
 from django.db.models import Count, Max, Prefetch, Q

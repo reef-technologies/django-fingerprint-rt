@@ -16,9 +16,11 @@ CI = os.environ.get("CI") is not None
 ROOT = Path(".nox/tmp/fingerprint")
 PYPROJECT = nox.project.load_toml("pyproject.toml")
 MAIN_BRANCH_NAME = "master"
-PYTHON_VERSIONS = ["3.10", "3.11", "3.12", "3.13"]
+PYTHON_VERSIONS = nox.project.python_versions(PYPROJECT)
 PYTHON_DEFAULT_VERSION = PYTHON_VERSIONS[-1]
-DJANGO_VERSIONS = ["3.2", "4.2", "5.2"]
+DJANGO_VERSIONS = [
+    c.split(" :: ")[-1] for c in PYPROJECT["project"]["classifiers"] if c.startswith("Framework :: Django :: ")
+]
 DEMO_APP_DIR = ROOT / "demo"
 
 nox.options.default_venv_backend = "uv"
@@ -139,9 +141,20 @@ def lint(session):
     run_readable(session, mode="check")
 
 
+def _session_python_version(session: nox.Session) -> tuple[int, int]:
+    python = session.python
+    if isinstance(python, str) and re.fullmatch(r"\d+\.\d+(?:\.\d+)?", python):
+        parts = python.split(".")
+        return int(parts[0]), int(parts[1])
+    return sys.version_info.major, sys.version_info.minor
+
+
 @nox.session(python=PYTHON_VERSIONS, tags=["test", "check"])
 @nox.parametrize("django", DJANGO_VERSIONS)
 def test(session, django: str):
+    # Django 4.2 is incompatible with Python 3.14 (BaseContext.__copy__ / copy(super())).
+    if django == "4.2" and _session_python_version(session) >= (3, 14):
+        session.skip("Django 4.2 does not support Python 3.14+")
     session.install(*PYPROJECT["dependency-groups"]["test"], ".[cache]", f"django~={django}.0")
     session.run("pytest", "-vv", *session.posargs)
 

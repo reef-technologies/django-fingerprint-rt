@@ -21,7 +21,7 @@ Add `fingerprint` to `INSTALLED_APPS`:
 ```python
 INSTALLED_APPS = [
     # ...
-    'fingerprint',
+    "fingerprint",
 ]
 ```
 
@@ -32,7 +32,7 @@ A special redirect page is provided. It is needed to accept internal POST reques
 ```python
 urlpatterns = [
     # ...
-    path('redirect/', FingerprintView.as_view(), name='fingerprint'),
+    path("redirect/", FingerprintView.as_view(), name="fingerprint"),
 ]
 ```
 
@@ -97,7 +97,7 @@ class MyClassBasedView(TemplateView):
 Django doesn't store connection between Session and corresponding User, and fingerprinting app uses sessions under the hood. In order to match fingerprint to a user, there is a model `fingerprint.models.UserSession`. To get all session keys for user, perform this query:
 
 ```python
-user.sessions.values_list('session_key', flat=True)
+user.sessions.values_list("session_key", flat=True)
 ```
 
 By default, Django stores sessions in your database. Fingerprinting app has a signal, so when a session is created, it's immediately associated with a user, so no need for manual actions here. However, **if non-database session backend is used**, then the signal is not emitted and user-session record is not created. To fix this, you should decorate some view with `@remember_user_session` decorator like this:
@@ -158,7 +158,7 @@ class MyView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        hit_counts = RequestFingerprint.get_count_for_objects(self.request, context['object_list'])
+        hit_counts = RequestFingerprint.get_count_for_objects(self.request, context["object_list"])
         for obj, count in hit_counts.items():
             obj.hit_count = count
 
@@ -172,14 +172,14 @@ In order to reduce database load, it is highly recommended to enable caching mec
 ```python
 INSTALLED_APPS = [
     # ...
-    'cacheops',
+    "cacheops",
 ]
 CACHEOPS_REDIS = "redis://localhost:6379/1"
 CACHEOPS = {
-    'fingerprint.url': {
-        'ops': 'get',
-        'local_get': True,
-        'timeout': int(timedelta(minutes=15).total_seconds()),
+    "fingerprint.url": {
+        "ops": "get",
+        "local_get": True,
+        "timeout": int(timedelta(minutes=15).total_seconds()),
     },
 }
 ```
