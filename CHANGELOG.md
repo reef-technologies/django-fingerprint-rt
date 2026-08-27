@@ -9,6 +9,18 @@ upcoming release can be found in [changelog.d](changelog.d).
 
 <!-- towncrier release notes start -->
 
+## [0.2.2](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.2.2) - 2026-08-27
+
+### Changed
+
+- Raise supported floors to Python 3.11+ and Django 4.2+; declare Python 3.13/3.14 and Django 5.2 support.
+
+### Added
+
+- Add `rebuild_hit_counts` management command to recompute cached hit counts from fingerprint rows.
+- Cache unique-session hit counts per URL so `get_count_for_urls` reads denormalized counts instead of aggregating fingerprint rows.
+
+
 ## [0.2.1](https://github.com/reef-technologies/django-fingerprint-rt/releases/tag/v0.2.1) - 2026-02-13
 
 ### Fixed
