@@ -66,13 +66,6 @@ jobs:
       - name: Build
         run: uvx pdm build
 
-      - name: Sign distribution
-        uses: sigstore/gh-action-sigstore-python@v3.0.0
-        with:
-          inputs: >-
-            dist/*.tar.gz
-            dist/*.whl
-
       - name: Create GitHub release
         id: create-release
         uses: softprops/action-gh-release@v2
@@ -84,10 +77,6 @@ jobs:
           files: >-
             dist/*.tar.gz
             dist/*.whl
-            dist/*.sigstore
-
-      - name: Remove signature files as pypa/gh-action-pypi-publish does not support them
-        run: rm -f dist/*.sigstore*
 
       - name: Publish distribution 📦 to TestPyPI
         if: ${{ steps.get-version.outputs.draft == 'true' }}
